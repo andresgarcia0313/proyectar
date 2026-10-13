@@ -3,8 +3,10 @@
 
 use crate::fallo::{Fallo, Resultado};
 use crate::modo::Fuente;
+use crate::registro;
 use ashpd::desktop::screencast::{CursorMode, Screencast, SourceType};
 use ashpd::desktop::{PersistMode, ResponseError, Session};
+use serde_json::json;
 use std::os::fd::OwnedFd;
 
 /// A running capture: PipeWire connection and node to read, until dropped or closed.
@@ -23,6 +25,7 @@ impl Captura {
     /// Asks the portal for a stream. The first time the user picks the screen or window in
     /// the portal's dialog; with a `token` from an earlier run the same choice comes back.
     pub async fn pedir(fuente: Fuente, token: Option<&str>) -> Resultado<Self> {
+        let inicio = std::time::Instant::now();
         let portal = Screencast::new().await.map_err(captura)?;
         let sesion = portal.create_session().await.map_err(captura)?;
         let tipo = match fuente {
@@ -50,6 +53,11 @@ impl Captura {
             .first()
             .ok_or_else(|| Fallo::Captura("el portal no entregó imagen".into()))?;
         let (nodo, tamano) = (flujo.pipe_wire_node_id(), flujo.size());
+        let (origen, guardado) = (format!("{:?}", flujo.source_type()), token.is_some());
+        let segundos = inicio.elapsed().as_secs_f32();
+        let datos = json!({"fuente": fuente, "pedido": format!("{tipo:?}"), "entregado": origen, "nodo": nodo,
+            "tamano": tamano, "permiso_guardado": guardado, "segundos": segundos});
+        registro::anotar("captura", datos);
         let token = respuesta.restore_token().map(str::to_owned);
         let fd = portal.open_pipe_wire_remote(&sesion).await.map_err(captura)?;
         Ok(Self { fuente, fd, nodo, tamano, token, sesion })

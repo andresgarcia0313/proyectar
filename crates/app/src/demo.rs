@@ -25,7 +25,11 @@ pub fn reproducir(escena: &str, enviar: impl Fn(Aviso)) {
         "negociando" => Estado::Negociando { nombre: sala() },
         "diagnostico" => Estado::Inactivo,
         "proyectando" | "error" => Estado::Proyectando { nombre: sala() },
-        "reconectando" => Estado::Reconectando { nombre: sala(), intento: 2 },
+        "reconectando" => Estado::Reconectando {
+            nombre: sala(),
+            intento: 2,
+            motivo: "Se perdió el enlace con el televisor".into(),
+        },
         _ => Estado::Buscando,
     };
     enviar(Aviso::Estado(estado));

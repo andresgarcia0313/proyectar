@@ -1,6 +1,7 @@
 //! A projection from start to finish: asks for the capture, runs sessions and, when one
 //! fails, applies `Fallo::recovery` (the "catch") so the picture comes back on its own.
 
+use crate::busqueda::encontrar;
 use crate::captura::Captura;
 use crate::diagnostico::{Causa, Diagnostico};
 use crate::fallo::Accion;
@@ -64,6 +65,7 @@ impl Ciclo {
             (self.avisar)(Aviso::Estado(Estado::Reconectando {
                 nombre: self.pantalla.nombre.clone(),
                 intento,
+                motivo: Diagnostico::de(&fallo, fase).titulo,
             }));
             let pausa = match accion {
                 Accion::Reintentar(pausa) => pausa,
@@ -72,6 +74,12 @@ impl Ciclo {
             if tokio::time::timeout(pausa, sesion::pedido(&mut self.parar)).await.is_ok() {
                 break;
             }
+            // NetworkManager forgets a peer once discovery stops: look again so the next attempt
+            // never invites a stale peer ("P2P peer ... is unknown").
+            if let Ok(vista) = encontrar(&self.wd, &self.pantalla.mac).await {
+                self.pantalla = vista;
+            }
+            self.wd.parar().await;
         }
         Captura::soltar(captura).await;
         (self.avisar)(Aviso::Estado(Estado::Inactivo));

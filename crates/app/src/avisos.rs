@@ -25,7 +25,7 @@ pub fn texto(estado: &Estado) -> String {
         Estado::EsperandoPantalla { .. } => "Esperando que el televisor abra el video…".into(),
         Estado::Negociando { nombre } => format!("Preparando el video con {nombre}…"),
         Estado::Proyectando { nombre } => format!("Proyectando en {nombre}"),
-        Estado::Reconectando { intento, .. } => format!("Reconectando (intento {intento})"),
+        Estado::Reconectando { intento, motivo, .. } => format!("Reconectando (intento {intento}): {motivo}"),
     }
 }
 
@@ -74,7 +74,10 @@ mod pruebas {
             "Esperando que el televisor abra el video…"
         );
         assert_eq!(texto(&Estado::Proyectando { nombre: tv() }), "Proyectando en Sala");
-        assert_eq!(texto(&Estado::Reconectando { nombre: tv(), intento: 2 }), "Reconectando (intento 2)");
+        assert_eq!(
+            texto(&Estado::Reconectando { nombre: tv(), intento: 2, motivo: "Se perdió el enlace".into() }),
+            "Reconectando (intento 2): Se perdió el enlace"
+        );
     }
 
     #[test]

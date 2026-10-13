@@ -54,9 +54,11 @@ pub fn montar(
     if let Some(fd) = &fd {
         elemento("fuente")?.set_property("fd", fd.as_raw_fd());
     }
+    // mpegtsmux reads the pads with gst_structure_get_int (unsigned fails and posts an ERROR that
+    // stops the stream: black screen on the TV) and the PMT with get_uint (signed lands elsewhere).
     let programa = gst::Structure::builder("program_map")
-        .field(format!("sink_{PID_VIDEO}"), 1u32)
-        .field(format!("sink_{PID_AUDIO}"), 1u32)
+        .field(format!("sink_{PID_VIDEO}"), 1i32)
+        .field(format!("sink_{PID_AUDIO}"), 1i32)
         .field("PMT_1", PID_PMT)
         .build();
     elemento("mux")?.set_property("prog-map", &programa);
@@ -76,6 +78,13 @@ pub fn montar(
         match msg.view() {
             gst::MessageView::Error(e) => {
                 tx.send_if_modified(|v| v.is_none().then(|| *v = Some(clasificar(e))).is_some());
+            }
+            gst::MessageView::Warning(w) => {
+                let origen = w.src().map(|s| s.path_string().to_string());
+                crate::registro::anotar(
+                    "gst_aviso",
+                    serde_json::json!({"origen": origen, "texto": w.error().to_string()}),
+                );
             }
             // Posted from inside each new streaming thread: the moment to raise it.
             gst::MessageView::StreamStatus(s) if s.get().0 == gst::StreamStatusType::Enter => {

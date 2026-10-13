@@ -63,6 +63,8 @@ pub enum Estado {
     Reconectando {
         nombre: String,
         intento: u32,
+        /// Why, in a few words (the diagnosis title).
+        motivo: String,
     },
 }
 

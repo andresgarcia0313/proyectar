@@ -34,6 +34,9 @@ async fn probar(cod: Codificador, m: wfd::VideoMode, segundos: u64) {
     assert!(r.cuentas.ts_pmt.load(Relaxed) >= 1, "sin PMT en el PID 0x1000");
     assert!(r.cuentas.claves.load(Relaxed) >= 1, "sin cuadro clave");
     assert_eq!(est.gpu, cod.es_gpu());
+    // Any bus ERROR ends a real session: none may appear while streaming.
+    let error = tokio::time::timeout(Duration::from_millis(50), medios.fallo()).await;
+    assert!(error.is_err(), "error en el bus: {error:?}");
     assert!(est.fps > m.fps as f32 * 0.6 && est.kbps > 100, "{est:?}");
     drop(medios);
 }

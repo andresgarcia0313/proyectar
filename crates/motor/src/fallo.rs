@@ -50,7 +50,8 @@ impl Fallo {
             Fallo::Protocolo(_) | Fallo::CapturaCancelada => Accion::Detener,
             Fallo::Captura(_) => Accion::NuevaCaptura,
             Fallo::Codificador { .. } => Accion::OtroCodificador,
-            Fallo::Medios(_) => Accion::Reintentar(Duration::from_millis(500)),
+            // The link is torn down with the session: the TV needs a moment before a new invitation.
+            Fallo::Medios(_) => Accion::Reintentar(Duration::from_secs(3)),
         }
     }
 }
