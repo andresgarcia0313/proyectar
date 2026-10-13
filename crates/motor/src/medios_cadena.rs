@@ -18,9 +18,10 @@ pub(crate) fn cola(max: u32, fuga: bool) -> String {
 
 fn fuente(origen: &Origen, modo: &VideoMode) -> String {
     match origen {
+        // Without media.type WirePlumber cannot link KWin's direct stream ("target not found").
         Origen::PipeWire { nodo, .. } => format!(
-            "pipewiresrc name=fuente path={nodo} do-timestamp=true always-copy=true \
-             keepalive-time=33 max-buffers=64 resend-last=true"
+            "pipewiresrc name=fuente path={nodo} do-timestamp=true always-copy=true keepalive-time=33 \
+             max-buffers=64 resend-last=true stream-properties=\"props,media.type=Video\""
         ),
         Origen::Prueba => format!(
             "videotestsrc name=fuente is-live=true pattern=pinwheel ! \

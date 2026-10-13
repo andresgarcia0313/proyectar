@@ -4,8 +4,8 @@
 use std::os::fd::OwnedFd;
 
 pub enum Origen {
-    /// Portal stream: the descriptor the portal gave and the PipeWire node.
-    PipeWire { fd: OwnedFd, nodo: u32 },
+    /// PipeWire node to read; through the portal's descriptor when it gave one (KWin does not).
+    PipeWire { fd: Option<OwnedFd>, nodo: u32 },
     /// Live test pattern, for tests.
     Prueba,
 }
