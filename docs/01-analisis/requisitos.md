@@ -1,7 +1,7 @@
 ---
 lang: es-CO
 título: Proyectar - Especificación de requisitos
-versión: 1.1.0
+versión: 1.2.0
 ---
 
 # Proyectar - Especificación de requisitos
@@ -13,6 +13,7 @@ versión: 1.1.0
 | 1.0.0 | 2026-10-12 | Andrés García | Versión inicial: visión, funciones de Windows a igualar, requisitos, exclusiones y riesgos |
 | 1.0.1 | 2026-10-12 | Andrés García | Limpieza para publicar: equipos de referencia sin datos del hogar ni nombres de equipos |
 | 1.1.0 | 2026-10-13 | Andrés García | Primera prueba con TV real: RF-14 a RF-17 y hoja de ruta tomada del emisor de Windows |
+| 1.2.0 | 2026-10-13 | Andrés García | RF-18 a RF-22 tras la segunda prueba: captura directa, audio del TV, latencia medida y comparación con macOS y Android |
 
 ## 1. Visión
 
@@ -50,6 +51,11 @@ con Windows 11 23H2 y documentación de Microsoft.
 | RF-14 | Fases y diagnóstico | Mostrar el paso en curso (invitar, enlazar, abrir video, proyectar), preguntar si apareció "Permitir" en la TV y, al fallar, decir en qué paso y qué revisar | Cada fallo de la prueba real queda explicado sin leer bitácoras del sistema | Debe |
 | RF-15 | Registro de eventos | Una línea JSON por evento en `~/.local/state/proyectar/eventos.jsonl`, con rotación a 4 MB | Un intento fallido se reconstruye paso a paso con `jq` | Debe |
 | RF-16 | Nombre del equipo | Anunciar por Wi-Fi Direct el nombre del equipo y el tipo "Computador" (categoría WPS 1, subcategoría 1), como Windows | La TV muestra el nombre del equipo en el aviso de permitir, no "0" | Debe |
+| RF-18 | Captura sin diálogos | En KDE, capturar con el protocolo de KWin: Duplicar transmite el monitor, Extender crea una salida con el nombre del TV y el tamaño del perfil (720p en Juegos) | Ningún diálogo de Wayland; Duplicar nunca entrega una salida virtual | Debe |
+| RF-19 | Audio en el TV | Mientras se proyecta, salida de audio "[TV] nombre" en los dispositivos de KDE; se vuelve la elegida y al terminar se restaura la anterior | Aparece y desaparece con la sesión; un cierre brusco se limpia al siguiente arranque | Debe |
+| RF-20 | Latencia visible | Medir el retardo dentro del equipo (captura a red) y mostrarlo en la tarjeta | El valor cambia cada segundo y se anota en el registro | Debe |
+| RF-21 | Monitoreo | Cada 10 s: video, retardos, CPU del proceso y radio Wi-Fi Direct (señal, tasa, reintentos) | Un corte o un retraso se explica con el registro | Debe |
+| RF-22 | Ventana | Recordar el tamaño entre aperturas y mostrar la versión en el pie | Al reabrir conserva el tamaño | Debería |
 | RF-17 | Datos del receptor | Pedir en M3 los parámetros opcionales que pide Windows (EDID, conector, modo preferido) y anotarlos | Un receptor que no los conoce no falla; los que responde quedan en el registro | Debería |
 
 ## 4. Requisitos no funcionales
@@ -95,4 +101,17 @@ Inspección de solo lectura del emisor de Windows 11 (`winmde.dll` negocia RTSP;
 | Canal del grupo junto al de la Wi-Fi normal | `IsInterfaceInMultiChannelConfiguration` | wpa_supplicant (`frequency`, `go_intent`) | Podría |
 | Envío a ritmo constante | `EnableSendTimeSmoothing` | `udpsink` no regula con `sync=false` (medido); exige un elemento propio | Podría |
 | PIN opcional | `PreferPinBasedPairing` | wpa_supplicant | Podría |
+
+## 8. Comparación con otros emisores
+
+| Función | Windows (Win+K) | macOS | Android (Smart View) | Proyectar |
+| --- | --- | --- | --- | --- |
+| Protocolo | Miracast | AirPlay (no Miracast) | Miracast o Google Cast | Miracast |
+| Duplicar y extender | Sí | Sí (AirPlay) | Solo duplicar | Sí |
+| Modo de latencia | Juego, trabajo, video | No | No | Juegos, Trabajo, Videos |
+| Audio al TV como dispositivo | Sí | Sí | Sí | Sí (RF-19) |
+| Reconexión sin aceptar de nuevo | Sí (grupo persistente) | Sí | Sí | Pendiente (§7) |
+| Ocultar notificaciones mientras proyecta | Sí (asistente de concentración) | Sí | Sí | Lo hace Plasma al compartir pantalla |
+| Entrada desde el TV (UIBC) | Sí | No | Parcial | No hará |
+| Latencia y diagnóstico visibles | No | No | No | Sí (RF-14, RF-20) |
 

@@ -1,7 +1,7 @@
 ---
 lang: es-CO
 título: Proyectar
-versión: 0.2.0
+versión: 0.3.0
 ---
 
 # Proyectar
@@ -21,6 +21,7 @@ paleta Drácula.
 | 0.1.0 | 2026-10-12 | Andrés García | Documentación inicial del proyecto |
 | 0.1.1 | 2026-10-12 | Andrés García | README bilingüe para publicar: funciones, requisitos, GPU, receptores, instalación, cortafuegos y modo demo |
 | 0.2.0 | 2026-10-13 | Andrés García | Nombre del equipo en Wi-Fi Direct (`--sistema`), fases de conexión, diagnóstico y registro de eventos |
+| 0.3.0 | 2026-10-13 | Andrés García | Salida de audio del TV en KDE, latencia del equipo visible, búfer de decodificación por perfil, monitoreo de radio y CPU, tamaño de ventana recordado |
 
 ## Qué es
 
@@ -170,6 +171,13 @@ sudo firewall-cmd --reload
 3. Acepte la conexión en la TV con el control remoto (solo la primera vez: la TV la recuerda).
 
 Mientras conecta, Proyectar muestra en qué paso va: invitar, enlazar, abrir el video y proyectar.
+
+### Latencia
+
+La tarjeta muestra "Equipo N ms": el retardo dentro del computador, de la captura a la red (suele
+quedar entre 20 y 60 ms). El televisor suma su propio búfer. En modo **Juegos** Proyectar envía
+720p a 60 fps con un búfer de decodificación de 500 ms (2 s en Videos), lo que reduce la espera del
+televisor. Activar el modo Juego del televisor ayuda si la marca lo aplica a Screen Mirroring.
 
 ### Si algo falla
 
