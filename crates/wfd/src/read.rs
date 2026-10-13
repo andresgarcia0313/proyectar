@@ -32,11 +32,22 @@ impl Message {
             if text.is_empty() {
                 break;
             }
-            let (k, v) = text.split_once(':').ok_or(Error::Malformed(text.into()))?;
-            headers.push((k.trim().to_owned(), v.trim().to_owned()));
+            // A line without `:` or a folded continuation carries nothing we use: skip it.
+            match text.split_once(':') {
+                Some((k, v)) if !text.starts_with([' ', '\t']) => {
+                    headers.push((k.trim().to_owned(), v.trim().to_owned()))
+                }
+                _ => {}
+            }
         }
         let mut msg = Self { start, headers, body: String::new() };
-        let len: u64 = msg.get("Content-Length").and_then(|v| v.parse().ok()).unwrap_or(0);
+        // Samsung repeats `Content-Length`; the first one that parses wins.
+        let len: u64 = msg
+            .headers
+            .iter()
+            .filter(|(k, _)| k.eq_ignore_ascii_case("Content-Length"))
+            .find_map(|(_, v)| v.parse().ok())
+            .unwrap_or(0);
         if len > r.limit() {
             return Err(too_big());
         }

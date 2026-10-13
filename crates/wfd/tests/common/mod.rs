@@ -1,5 +1,9 @@
-//! Sink side of the RTSP exchange for the tests.
+//! Sink side of the RTSP exchange for the tests, with the quirks of real receivers.
 #![allow(dead_code)]
+
+mod quirks;
+pub mod script;
+pub use quirks::Quirks;
 
 use tokio::io::{AsyncWriteExt, BufReader, DuplexStream, ReadHalf, WriteHalf};
 use wfd::rtsp::Message;
@@ -14,69 +18,70 @@ pub fn caps_reply(video: &str, audio: &str) -> String {
     )
 }
 
+pub fn wanted() -> wfd::Wanted {
+    wfd::Wanted { max_height: 1080, max_fps: 60, audio: true, local_ip: "192.168.49.1".into() }
+}
+
 pub struct Sink {
     r: BufReader<ReadHalf<DuplexStream>>,
     w: WriteHalf<DuplexStream>,
     pub cseq: u32,
+    pub quirks: Quirks,
+    /// Body of the last M3, to check what the source asked for.
+    pub asked: String,
 }
 
 impl Sink {
     pub fn new(io: DuplexStream) -> Self {
+        Self::with(io, Quirks::default())
+    }
+
+    pub fn with(io: DuplexStream, quirks: Quirks) -> Self {
         let (r, w) = tokio::io::split(io);
-        Self { r: BufReader::new(r), w, cseq: 0 }
+        Self { r: BufReader::new(r), w, cseq: 0, quirks, asked: String::new() }
     }
 
     pub async fn read(&mut self) -> Message {
         Message::read(&mut self.r).await.unwrap().expect("source closed")
     }
 
+    /// Writes `m` the way this receiver would: letter case, line ends, repeated headers.
     pub async fn send(&mut self, m: Message) {
-        self.w.write_all(&m.to_bytes()).await.unwrap();
+        let text = self.quirks.render(&m);
+        self.w.write_all(text.as_bytes()).await.unwrap();
     }
 
     pub async fn answer(&mut self, req: &Message) {
         self.send(Message::reply(req, 200, "OK")).await;
     }
 
-    /// Sends a request and returns the source's reply.
-    pub async fn request(&mut self, method: &str, body: &str) -> Message {
+    pub fn next_request(&mut self, method: &str, body: &str) -> Message {
         self.cseq += 1;
-        let mut m = Message::request(method, "rtsp://192.168.49.1/wfd1.0/streamid=0", self.cseq);
-        if !body.is_empty() {
-            m = m.with_body(body.into());
+        let m = Message::request(method, "rtsp://192.168.49.1/wfd1.0/streamid=0", self.cseq);
+        if body.is_empty() {
+            m
+        } else {
+            m.with_body(body.into())
         }
+    }
+
+    /// Sends a request and returns the source's reply, skipping keep-alives meanwhile.
+    pub async fn request(&mut self, method: &str, body: &str) -> Message {
+        let m = self.next_request(method, body);
         self.send(m).await;
-        let reply = self.read().await;
-        assert!(reply.is_ok() && reply.cseq() == self.cseq, "{reply:?}");
-        reply
+        loop {
+            let reply = self.read().await;
+            if reply.method() == Some("GET_PARAMETER") {
+                self.answer(&reply).await;
+                continue;
+            }
+            assert!(reply.is_ok() && reply.cseq() == self.cseq, "{reply:?}");
+            return reply;
+        }
     }
 
     /// Plays M1-M7 as a sink and returns the M4 body the source chose.
     pub async fn handshake(&mut self, caps: String) -> String {
-        let m1 = self.read().await;
-        assert_eq!(m1.get("Require"), Some("org.wfa.wfd1.0"));
-        self.send(
-            Message::reply(&m1, 200, "OK").header("Public", "org.wfa.wfd1.0, GET_PARAMETER, SET_PARAMETER"),
-        )
-        .await;
-        let m2 = self.request("OPTIONS", "").await;
-        assert!(m2.get("Public").unwrap().contains("SETUP"));
-        let m3 = self.read().await;
-        assert!(m3.body.contains("wfd_video_formats"));
-        self.send(Message::reply(&m3, 200, "OK").with_body(caps)).await;
-        let m4 = self.read().await;
-        self.answer(&m4).await;
-        let m5 = self.read().await;
-        assert!(m5.body.contains("wfd_trigger_method: SETUP"));
-        self.answer(&m5).await;
-        self.cseq += 1;
-        let setup = Message::request("SETUP", "rtsp://192.168.49.1/wfd1.0/streamid=0", self.cseq)
-            .header("Transport", "RTP/AVP/UDP;unicast;client_port=1028");
-        self.send(setup).await;
-        let m6 = self.read().await;
-        assert_eq!(m6.get("Session"), Some("6B8B4567"));
-        assert!(m6.get("Transport").unwrap().contains("client_port=1028"));
-        self.request("PLAY", "").await;
-        m4.body
+        quirks::handshake(self, caps).await
     }
 }

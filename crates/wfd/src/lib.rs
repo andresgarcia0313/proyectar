@@ -1,19 +1,26 @@
-//! Wi-Fi Display (Miracast R1) source side, with no I/O policy of its own: RTSP messages,
+//! Wi-Fi Display (Miracast, spec v2.1 R1 features) source side, with no I/O policy of its own: RTSP messages,
 //! capability negotiation (M1-M7), keep-alive and the information elements for discovery.
 
 pub mod audio;
+mod caps;
 mod events;
 pub mod ie;
+mod inbox;
 mod link;
+pub mod modes;
 pub mod params;
 mod read;
 pub mod rtsp;
 pub mod session;
+pub mod sink_info;
 mod start;
+mod triggers;
 pub mod video;
 
 pub use audio::AudioCodec;
+pub use modes::Table;
 pub use session::{Event, Negotiated, Session, Wanted};
+pub use sink_info::SinkInfo;
 pub use video::VideoMode;
 
 #[derive(Debug, thiserror::Error)]
