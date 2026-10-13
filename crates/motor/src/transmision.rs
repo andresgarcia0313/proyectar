@@ -21,7 +21,7 @@ pub async fn transmitir(
     avisar: &(dyn Fn(Aviso) + Send + Sync),
 ) -> Resultado<Fin> {
     let mut reloj = tokio::time::interval(Duration::from_secs(1));
-    let mut segundos = 0u64;
+    let (mut segundos, mut cpu) = (0u64, crate::monitor::Cpu::nuevo());
     let fin = loop {
         tokio::select! {
             evento = sesion.next_event() => {
@@ -44,8 +44,8 @@ pub async fn transmitir(
                 let e = medios.estadisticas();
                 segundos += 1;
                 if segundos % 10 == 0 {
-                    registro::anotar("estadisticas", json!({"s": segundos, "ancho": e.ancho, "alto": e.alto,
-                        "fps": e.fps, "kbps": e.kbps, "gpu": e.gpu}));
+                    let (radio, cpu) = (crate::monitor::radio().await, cpu.medir());
+                    registro::anotar("estadisticas", json!({"s": segundos, "video": e, "cpu_pct": cpu, "radio": radio}));
                 }
                 avisar(Aviso::Estadisticas(e));
             }

@@ -1,6 +1,5 @@
-//! Projection engine: finds Miracast displays, links over Wi-Fi Direct, negotiates with
-//! `wfd` and streams the screen with the GPU encoder. The interface talks to it only
-//! through [`Motor`] (commands) and [`Aviso`] (what happened), so it never blocks.
+//! Projection engine (Wi-Fi Direct, `wfd`, GPU encoder). The interface talks to it only through
+//! [`Motor`] (commands) and [`Aviso`] (what happened), so it never blocks.
 
 mod activa;
 mod busqueda;
@@ -15,10 +14,13 @@ pub mod medios;
 mod medios_audio;
 mod medios_cadena;
 mod medios_estado;
+mod medios_latencia;
+mod medios_medidas;
 mod medios_montaje;
 mod medios_ritmo;
 mod medios_tipos;
 pub mod modo;
+mod monitor;
 mod nm;
 mod pantalla;
 mod prioridad;
@@ -63,13 +65,12 @@ pub enum Estado {
     Reconectando {
         nombre: String,
         intento: u32,
-        /// Why, in a few words (the diagnosis title).
-        motivo: String,
+        motivo: String, // the diagnosis title
     },
 }
 
 /// Live numbers for the status card.
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default, serde::Serialize)]
 pub struct Estadisticas {
     pub ancho: u32,
     pub alto: u32,
@@ -77,6 +78,11 @@ pub struct Estadisticas {
     pub kbps: u32,
     /// `true` with the GPU encoder, `false` with a software fallback.
     pub gpu: bool,
+    /// Delay inside this laptop, capture to network, in ms: average and worst of the last second.
+    pub retardo_ms: f32,
+    pub retardo_peor_ms: f32,
+    /// Capture to encoded frame, in ms.
+    pub retardo_cod_ms: f32,
 }
 
 /// Everything the engine reports, delivered on its own threads: the interface must

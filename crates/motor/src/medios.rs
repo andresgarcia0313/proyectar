@@ -2,7 +2,8 @@
 //! assembly in `medios_montaje`; here its lifetime, IDR requests, statistics and failures.
 
 use crate::fallo::{Fallo, Resultado};
-use crate::medios_estado::{evento_idr, Aviso, Clase, Contador};
+use crate::medios_estado::{evento_idr, Aviso, Clase};
+use crate::medios_medidas::Medidas;
 use crate::medios_montaje::montar;
 use crate::medios_ritmo::{aplicar, Ritmo};
 pub use crate::medios_tipos::{Codificador, Origen};
@@ -12,7 +13,6 @@ use gstreamer as gst;
 use gstreamer::prelude::*;
 use std::net::SocketAddr;
 use std::os::fd::OwnedFd;
-use std::sync::Arc;
 use tokio::sync::watch;
 use wfd::{AudioCodec, VideoMode};
 
@@ -20,7 +20,7 @@ pub struct Medios {
     pipeline: gst::Pipeline,
     codificador: Codificador,
     modo: VideoMode,
-    contador: Arc<Contador>,
+    medidas: Medidas,
     aviso: watch::Receiver<Aviso>,
     ritmo: Ritmo,
     _fd: Option<OwnedFd>,
@@ -43,7 +43,7 @@ impl Medios {
             pipeline: m.tuberia,
             codificador,
             modo,
-            contador: m.contador,
+            medidas: m.medidas,
             aviso: m.aviso,
             ritmo,
             _fd: m.fd,
@@ -66,14 +66,10 @@ impl Medios {
         if let (Some(kbps), Some(cod)) = (self.ritmo.calma(), self.pipeline.by_name("cod")) {
             aplicar(&cod, self.codificador, kbps);
         }
-        let (fps, kbps) = self.contador.tasa();
-        Estadisticas {
-            ancho: self.modo.width,
-            alto: self.modo.height,
-            fps,
-            kbps,
-            gpu: self.codificador.es_gpu(),
-        }
+        let ((fps, kbps), (retardo_ms, retardo_peor_ms, retardo_cod_ms)) =
+            (self.medidas.contador.tasa(), self.medidas.retardos());
+        let (ancho, alto, gpu) = (self.modo.width, self.modo.height, self.codificador.es_gpu());
+        Estadisticas { ancho, alto, fps, kbps, gpu, retardo_ms, retardo_peor_ms, retardo_cod_ms }
     }
 
     /// Waits for the first bus error and says which stage it came from.

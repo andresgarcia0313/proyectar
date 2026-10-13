@@ -2,7 +2,8 @@
 
 use crate::fallo::{Fallo, Resultado};
 use crate::medios_cadena::{descripcion, PID_AUDIO, PID_PMT, PID_VIDEO};
-use crate::medios_estado::{clasificar, Aviso, Contador};
+use crate::medios_estado::{clasificar, Aviso};
+use crate::medios_medidas::Medidas;
 use crate::medios_tipos::{Codificador, Origen};
 use crate::modo::Perfil;
 use crate::prioridad;
@@ -10,14 +11,13 @@ use gstreamer as gst;
 use gstreamer::prelude::*;
 use std::net::SocketAddr;
 use std::os::fd::{AsRawFd, OwnedFd};
-use std::sync::Arc;
 use tokio::sync::watch;
 use wfd::{AudioCodec, VideoMode};
 
 pub struct Montaje {
     pub tuberia: gst::Pipeline,
     pub fd: Option<OwnedFd>,
-    pub contador: Arc<Contador>,
+    pub medidas: Medidas,
     pub aviso: watch::Receiver<Aviso>,
 }
 
@@ -63,15 +63,7 @@ pub fn montar(
         .build();
     elemento("mux")?.set_property("prog-map", &programa);
 
-    let contador = Arc::new(Contador::nuevo());
-    let c = contador.clone();
-    let sonda = elemento("analizador")?.static_pad("src").ok_or_else(|| medios("sin salida"))?;
-    sonda.add_probe(gst::PadProbeType::BUFFER, move |_, info| {
-        if let Some(gst::PadProbeData::Buffer(b)) = &info.data {
-            c.sumar(b.size());
-        }
-        gst::PadProbeReturn::Ok
-    });
+    let medidas = Medidas::instalar(&tuberia).ok_or_else(|| medios("sin puntos de medida"))?;
     let (tx, aviso) = watch::channel(None);
     let runtime = tokio::runtime::Handle::try_current().ok();
     tuberia.bus().ok_or_else(|| medios("sin bus"))?.set_sync_handler(move |_, msg| {
@@ -94,5 +86,5 @@ pub fn montar(
         }
         gst::BusSyncReply::Drop
     });
-    Ok(Montaje { tuberia, fd, contador, aviso })
+    Ok(Montaje { tuberia, fd, medidas, aviso })
 }

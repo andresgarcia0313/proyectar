@@ -2,6 +2,7 @@
 //! hardware of most computers; encoders this one lacks are skipped.
 
 use std::os::fd::OwnedFd;
+use wfd::VideoMode;
 
 pub enum Origen {
     /// Portal stream: the descriptor the portal gave and the PipeWire node.
@@ -62,5 +63,21 @@ impl Codificador {
             Self::OpenH264 => "openh264enc",
             Self::X264 => "x264enc",
         }
+    }
+}
+
+/// The capture element: the PipeWire stream, or a moving test picture for the tests.
+pub(crate) fn fuente(origen: &Origen, modo: &VideoMode) -> String {
+    match origen {
+        Origen::PipeWire { nodo, .. } => format!(
+            "pipewiresrc name=fuente path={nodo} do-timestamp=true always-copy=true \
+             keepalive-time={} max-buffers=64 resend-last=true",
+            1000 / modo.fps.max(1)
+        ),
+        Origen::Prueba => format!(
+            "videotestsrc name=fuente is-live=true pattern=pinwheel ! \
+             video/x-raw,width={},height={},framerate={}/1",
+            modo.width, modo.height, modo.fps
+        ),
     }
 }
