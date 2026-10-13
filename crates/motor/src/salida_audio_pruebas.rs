@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn argumentos_llevan_nombre_del_tv_icono_y_prioridad_minima() {
-    let args = argumentos("Tv\"garcia'usa");
+    let args = argumentos("Sa\"l'a");
     assert!(args.starts_with("sink_name=proyectar_tv rate=48000 channels=2"));
     assert!(args.contains("device.description=\"[TV] Sala\""));
     assert!(args.contains("device.icon_name=video-display"));
