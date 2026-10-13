@@ -40,6 +40,7 @@ Rectangle {
             }
         }
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
@@ -51,6 +52,7 @@ Rectangle {
             Accessible.name: card.texto
         }
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             visible: card.codigo === 3 || card.codigo === 5
             horizontalAlignment: Text.AlignHCenter

@@ -3,20 +3,10 @@
 use crate::enlace::Enlace;
 use crate::fallo::{Fallo, Resultado};
 use crate::nm::*;
-use serde::{Deserialize, Serialize};
+pub use crate::pantalla::{limpio, Pantalla};
 use std::collections::HashMap;
 use wfd::ie;
 use zbus::zvariant::{OwnedObjectPath, Value};
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Pantalla {
-    pub nombre: String,
-    pub mac: String,
-    /// Signal strength, 0-100.
-    pub senal: u8,
-    #[serde(skip)]
-    pub ruta: String,
-}
 
 pub struct WifiDirect {
     conn: zbus::Connection,
@@ -59,7 +49,8 @@ impl WifiDirect {
                 continue;
             }
             let mac = peer.hw_address().await?;
-            let nombre = peer.name().await.ok().filter(|n| !n.is_empty()).unwrap_or(mac.clone());
+            let nombre =
+                peer.name().await.ok().map(|n| limpio(&n)).filter(|n| !n.is_empty()).unwrap_or(mac.clone());
             let senal = peer.strength().await.unwrap_or(0);
             found.push(Pantalla { nombre, mac, senal, ruta: path.to_string() });
         }

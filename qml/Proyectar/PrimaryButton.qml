@@ -22,6 +22,7 @@ AbstractButton {
             spacing: Theme.s2
             Icon { glyph: control.iconName; color: control.labelColor; visible: glyph !== "" }
             Text {
+                textFormat: Text.PlainText
                 text: control.text
                 color: control.labelColor
                 font.pointSize: Theme.body * 1.05

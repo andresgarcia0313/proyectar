@@ -36,6 +36,7 @@ ItemDelegate {
             Layout.fillWidth: true
             spacing: 0
             Text {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: row.nombre
                 elide: Text.ElideRight
@@ -47,6 +48,7 @@ ItemDelegate {
                 spacing: Theme.s1
                 Icon { glyph: "star"; size: 12; color: Theme.warn; visible: row.reciente }
                 Text {
+                    textFormat: Text.PlainText
                     text: (row.reciente ? "Usada antes · " : "") + row.calidad
                     color: Theme.textMuted
                     font.pointSize: Theme.caption

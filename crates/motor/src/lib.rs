@@ -18,6 +18,7 @@ mod medios_ritmo;
 mod medios_tipos;
 pub mod modo;
 mod nm;
+mod pantalla;
 mod prioridad;
 mod proyeccion;
 pub mod recientes;

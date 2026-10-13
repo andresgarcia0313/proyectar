@@ -21,6 +21,7 @@ Rectangle {
         spacing: Theme.s2
         Icon { glyph: "circle-alert"; color: Theme.danger; Layout.alignment: Qt.AlignTop }
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             text: banner.message
             color: Theme.text

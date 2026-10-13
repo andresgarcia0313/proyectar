@@ -2,6 +2,7 @@ import QtQuick
 
 // One quiet line of numbers: resolution, frames per second, bitrate and which encoder.
 Text {
+    textFormat: Text.PlainText
     id: line
     property string resolucion
     property real fps: 0

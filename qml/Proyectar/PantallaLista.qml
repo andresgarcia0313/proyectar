@@ -47,6 +47,7 @@ Rectangle {
         spacing: Theme.s2
         Icon { glyph: "cast"; size: 32; color: Theme.border; Layout.alignment: Qt.AlignHCenter }
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
@@ -56,6 +57,7 @@ Rectangle {
             text: lista.buscando ? "Buscando pantallas…" : "No hay pantallas cerca"
         }
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap

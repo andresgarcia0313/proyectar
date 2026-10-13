@@ -31,6 +31,7 @@ Window {
             Layout.fillWidth: true
             Icon { glyph: "cast"; size: 24; color: Theme.accent }
             Text {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: "Proyectar"
                 color: Theme.text
@@ -54,6 +55,7 @@ Window {
                 color: win.proy.codigo === 1 ? Theme.accent : Theme.border
             }
             Text {
+                textFormat: Text.PlainText
                 Layout.fillWidth: true
                 text: win.proy.texto
                 color: Theme.textMuted

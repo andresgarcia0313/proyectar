@@ -18,7 +18,7 @@ ColumnLayout {
 
     ColumnLayout {
         spacing: Theme.s1
-        Text { text: "Modo de pantalla"; color: Theme.textMuted; font.pointSize: Theme.label
+        Text { textFormat: Text.PlainText; text: "Modo de pantalla"; color: Theme.textMuted; font.pointSize: Theme.label
                font.weight: Font.DemiBold; Accessible.role: Accessible.Heading }
         Segmented {
             Layout.fillWidth: true
@@ -27,12 +27,12 @@ ColumnLayout {
             current: panel.fuente
             onPicked: (i) => panel.fuenteElegida(i)
         }
-        Text { text: panel.notasFuente[panel.fuente]; color: Theme.textMuted
+        Text { textFormat: Text.PlainText; text: panel.notasFuente[panel.fuente]; color: Theme.textMuted
                font.pointSize: Theme.caption }
     }
     ColumnLayout {
         spacing: Theme.s1
-        Text { text: "Latencia"; color: Theme.textMuted; font.pointSize: Theme.label
+        Text { textFormat: Text.PlainText; text: "Latencia"; color: Theme.textMuted; font.pointSize: Theme.label
                font.weight: Font.DemiBold; Accessible.role: Accessible.Heading }
         Segmented {
             Layout.fillWidth: true
@@ -41,12 +41,13 @@ ColumnLayout {
             current: panel.latencia
             onPicked: (i) => panel.latenciaElegida(i)
         }
-        Text { text: panel.notasLatencia[panel.latencia]; color: Theme.textMuted
+        Text { textFormat: Text.PlainText; text: panel.notasLatencia[panel.latencia]; color: Theme.textMuted
                font.pointSize: Theme.caption }
     }
     RowLayout {
         Layout.fillWidth: true
         Text {
+            textFormat: Text.PlainText
             Layout.fillWidth: true
             text: "Audio en el televisor"
             color: Theme.text
