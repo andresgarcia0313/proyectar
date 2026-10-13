@@ -75,6 +75,7 @@ pub async fn intentar(cx: Contexto<'_>) -> Resultado<Fin> {
         let (sesion, acordado) = wfd::Session::negotiate(tcp, &quiero).await?;
         let origen = Origen::PipeWire { fd: cx.captura.fd.try_clone()?, nodo: cx.captura.nodo };
         let destino = SocketAddr::new(remoto.ip(), acordado.rtp_port);
+        let _salida_tv = crate::salida_audio::SalidaTv::crear(&nombre, opciones.audio);
         let medios = Medios::iniciar(
             origen,
             destino,
