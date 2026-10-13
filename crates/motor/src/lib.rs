@@ -7,6 +7,7 @@ mod busqueda;
 pub mod captura;
 mod ciclo;
 mod control;
+pub mod diagnostico;
 pub mod enlace;
 pub mod fallo;
 pub mod medios;
@@ -22,9 +23,11 @@ mod pantalla;
 mod prioridad;
 mod proyeccion;
 pub mod recientes;
+pub mod registro;
 mod sesion;
 pub mod wifi_direct;
 
+pub use diagnostico::{Causa, Diagnostico};
 pub use fallo::{Accion, Fallo};
 pub use modo::{Fuente, Latencia, Opciones};
 pub use proyeccion::Motor;
@@ -38,12 +41,16 @@ pub type Avisar = std::sync::Arc<dyn Fn(Aviso) + Send + Sync>;
 pub enum Estado {
     Inactivo,
     Buscando,
-    /// Wi-Fi Direct link being set up with `nombre`.
+    /// Inviting `nombre`: the TV may be asking the user to allow this laptop.
     Conectando {
         nombre: String,
     },
-    /// Linked; the TV may be asking the user to accept on screen.
+    /// Linked; waiting for the TV to open the video session.
     EsperandoPantalla {
+        nombre: String,
+    },
+    /// The TV opened the session; agreeing on resolution and codecs (RTSP M1 to M7).
+    Negociando {
         nombre: String,
     },
     Proyectando {
@@ -77,4 +84,6 @@ pub enum Aviso {
     Estadisticas(Estadisticas),
     /// A failure the user should read, in plain Spanish.
     Error(String),
+    /// Why the last projection failed and what to try.
+    Diagnostico(Diagnostico),
 }

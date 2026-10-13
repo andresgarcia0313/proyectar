@@ -13,6 +13,7 @@ pub fn codigo(estado: &Estado) -> i32 {
         Estado::EsperandoPantalla { .. } => 3,
         Estado::Proyectando { .. } => 4,
         Estado::Reconectando { .. } => 5,
+        Estado::Negociando { .. } => 6,
     }
 }
 
@@ -21,7 +22,8 @@ pub fn texto(estado: &Estado) -> String {
         Estado::Inactivo => "Elige una pantalla para proyectar".into(),
         Estado::Buscando => "Buscando…".into(),
         Estado::Conectando { nombre } => format!("Conectando con {nombre}…"),
-        Estado::EsperandoPantalla { .. } => "Acepta la conexión en el televisor".into(),
+        Estado::EsperandoPantalla { .. } => "Esperando que el televisor abra el video…".into(),
+        Estado::Negociando { nombre } => format!("Preparando el video con {nombre}…"),
         Estado::Proyectando { nombre } => format!("Proyectando en {nombre}"),
         Estado::Reconectando { intento, .. } => format!("Reconectando (intento {intento})"),
     }
@@ -32,6 +34,7 @@ pub fn nombre(estado: &Estado) -> String {
         Estado::Inactivo | Estado::Buscando => String::new(),
         Estado::Conectando { nombre }
         | Estado::EsperandoPantalla { nombre }
+        | Estado::Negociando { nombre }
         | Estado::Proyectando { nombre }
         | Estado::Reconectando { nombre, .. } => nombre.clone(),
     }
@@ -66,7 +69,10 @@ mod pruebas {
         let tv = || "Sala".to_string();
         assert_eq!(texto(&Estado::Buscando), "Buscando…");
         assert_eq!(texto(&Estado::Conectando { nombre: tv() }), "Conectando con Sala…");
-        assert_eq!(texto(&Estado::EsperandoPantalla { nombre: tv() }), "Acepta la conexión en el televisor");
+        assert_eq!(
+            texto(&Estado::EsperandoPantalla { nombre: tv() }),
+            "Esperando que el televisor abra el video…"
+        );
         assert_eq!(texto(&Estado::Proyectando { nombre: tv() }), "Proyectando en Sala");
         assert_eq!(texto(&Estado::Reconectando { nombre: tv(), intento: 2 }), "Reconectando (intento 2)");
     }

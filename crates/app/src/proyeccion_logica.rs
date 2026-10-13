@@ -33,6 +33,7 @@ impl qobject::Proyeccion {
                 self.as_mut().set_kbps(i32::try_from(e.kbps).unwrap_or(i32::MAX));
                 return self.set_gpu(e.gpu);
             }
+            Aviso::Diagnostico(_) => {}
             Aviso::Error(mensaje) => return self.set_ultimo_error(QString::from(mensaje.as_str())),
         }
         let json = avisos::lista_json(&self.cercanas, &self.recientes);
