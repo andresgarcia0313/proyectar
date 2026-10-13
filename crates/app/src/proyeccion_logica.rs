@@ -31,6 +31,7 @@ impl qobject::Proyeccion {
                 self.as_mut().set_resolucion(QString::from(format!("{}×{}", e.ancho, e.alto).as_str()));
                 self.as_mut().set_fps(f64::from(e.fps));
                 self.as_mut().set_kbps(i32::try_from(e.kbps).unwrap_or(i32::MAX));
+                self.as_mut().set_retardo(f64::from(e.retardo_ms));
                 return self.set_gpu(e.gpu);
             }
             Aviso::Diagnostico(d) => return self.mostrar_diagnostico(&d),

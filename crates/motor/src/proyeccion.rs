@@ -1,5 +1,4 @@
-//! The orchestrator: one engine thread with its own runtime takes the interface's commands
-//! in order, so a slow step (NetworkManager, the portal) never blocks the window.
+//! The orchestrator: one engine thread takes the interface's commands in order, so a slow step never blocks the window.
 
 use crate::activa::{guardar_opciones, terminar, Activa};
 use crate::busqueda::buscar;
@@ -59,6 +58,7 @@ impl Motor {
 }
 
 async fn atender(mut rx: mpsc::UnboundedReceiver<Orden>, avisar: Avisar) {
+    tokio::task::spawn_blocking(crate::salida_audio::limpiar_huerfano); // left by a crash
     let recientes = Arc::new(Mutex::new(Recientes::cargar()));
     avisar(Aviso::Recientes(recientes.lock().unwrap_or_else(|e| e.into_inner()).pantallas.clone()));
     let (mut wd, mut busqueda, mut activa) =

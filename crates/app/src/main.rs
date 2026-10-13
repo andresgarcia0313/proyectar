@@ -10,6 +10,7 @@ mod proyeccion_diagnostico;
 mod proyeccion_logica;
 mod proyeccion_object;
 mod supervisor;
+mod ventana;
 
 use std::ffi::{c_char, c_int, CString};
 

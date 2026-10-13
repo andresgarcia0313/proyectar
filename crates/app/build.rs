@@ -8,7 +8,7 @@ fn main() {
     println!("cargo:rerun-if-changed={}", interface.display());
 
     CxxQtBuilder::new_qml_module(QmlModule::new("ProyectarApp").version(1, 0).qml_files(["qml/Main.qml"]))
-        .files(["src/proyeccion_object.rs"])
+        .files(["src/proyeccion_object.rs", "src/ventana.rs"])
         // Linux and macOS pull QtGui in through QtQuick; the MSVC linker needs it named.
         .qt_module("Gui")
         .qt_module("Quick")

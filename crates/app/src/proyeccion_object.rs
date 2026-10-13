@@ -23,6 +23,8 @@ pub mod qobject {
         #[qproperty(f64, fps)]
         #[qproperty(i32, kbps)]
         #[qproperty(bool, gpu)]
+        /// Delay inside this laptop, capture to network, in ms.
+        #[qproperty(f64, retardo)]
         #[qproperty(QString, ultimo_error, cxx_name = "ultimoError")]
         #[qproperty(i32, latencia)]
         #[qproperty(i32, fuente)]
@@ -77,6 +79,7 @@ pub struct ProyeccionRust {
     pub(crate) fps: f64,
     pub(crate) kbps: i32,
     pub(crate) gpu: bool,
+    pub(crate) retardo: f64,
     pub(crate) ultimo_error: QString,
     pub(crate) latencia: i32,
     pub(crate) fuente: i32,

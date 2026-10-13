@@ -5,4 +5,5 @@ import ProyectarApp
 // Wires the Rust object into the interface.
 MainWindow {
     proy: Proyeccion {}
+    ventana: Ventana {}
 }

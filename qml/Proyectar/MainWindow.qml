@@ -6,6 +6,8 @@ Window {
     id: win
     // The `Proyeccion` object from Rust (see src/proyeccion_object.rs).
     required property var proy
+    // Size remembered between runs and the version for the footer (src/ventana.rs).
+    required property var ventana
     property string seleccion
     readonly property bool enLista: proy.codigo < 2
     // Inviting, linking or opening the video: only the connection and its way out are shown.
@@ -16,8 +18,11 @@ Window {
     }
 
     title: "Proyectar"
-    width: 380; height: 640
+    width: ventana.ancho; height: ventana.alto
     minimumWidth: 340; minimumHeight: 560
+    onWidthChanged: guardar.restart()
+    onHeightChanged: guardar.restart()
+    Timer { id: guardar; interval: 600; onTriggered: win.ventana.recordar(win.width, win.height) }
     color: Theme.base
     visible: true
 
@@ -117,6 +122,7 @@ Window {
             fps: win.proy.fps
             kbps: win.proy.kbps
             gpu: win.proy.gpu
+            retardo: win.proy.retardo
             onDesconectar: win.proy.desconectar()
         }
 
@@ -129,6 +135,16 @@ Window {
             onFuenteElegida: (i) => win.proy.elegirFuente(i)
             onLatenciaElegida: (i) => win.proy.elegirLatencia(i)
             onAudioElegido: (activo) => win.proy.elegirAudio(activo)
+        }
+
+        Text {
+            textFormat: Text.PlainText
+            Layout.fillWidth: true
+            horizontalAlignment: Text.AlignHCenter
+            text: "Proyectar " + win.ventana.version
+            color: Theme.textMuted
+            font.pointSize: Theme.caption
+            opacity: 0.7
         }
     }
 }

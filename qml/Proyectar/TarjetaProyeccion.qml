@@ -12,6 +12,7 @@ Rectangle {
     property real fps: 0
     property int kbps: 0
     property bool gpu: false
+    property real retardo: 0
     signal desconectar()
     readonly property bool proyectando: codigo === 4
     readonly property color tono: proyectando ? Theme.ok : codigo === 5 ? Theme.warn : Theme.accent
@@ -72,7 +73,7 @@ Rectangle {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             visible: card.proyectando && card.hayEstadisticas
-            resolucion: card.resolucion; fps: card.fps; kbps: card.kbps; gpu: card.gpu
+            resolucion: card.resolucion; fps: card.fps; kbps: card.kbps; gpu: card.gpu; retardo: card.retardo
         }
         PrimaryButton {
             Layout.alignment: Qt.AlignHCenter
