@@ -1,16 +1,17 @@
-//! Capability negotiation as the source, M1 to M7 (WFD spec, section 6.4).
+//! Capability negotiation as the source, M1 to M7 (WFD spec v2.1, section 6.4).
 
-use crate::link::{default_answer, Link, PUBLIC};
+use crate::link::{Link, REPLY_WAIT};
 use crate::rtsp::Message;
-use crate::{audio, params, video, AudioCodec, Error, VideoMode};
+use crate::sink_info::SinkInfo;
+use crate::{caps, params, AudioCodec, Error, VideoMode};
+use std::time::Duration;
 use tokio::io::{AsyncRead, AsyncWrite};
 
-/// Seconds the sink may stay silent; we send keep-alives well before it expires.
+/// Seconds the sink may stay silent, announced in M6; keep-alives go out at half of it.
 pub const SESSION_TIMEOUT: u64 = 30;
-const SESSION_ID: &str = "6B8B4567";
-/// Same order as Android's source, which every certified sink was tested against.
-const M3_ASK: &str =
-    "wfd_content_protection\r\nwfd_video_formats\r\nwfd_audio_codecs\r\nwfd_client_rtp_ports\r\n";
+pub(crate) const SESSION_ID: &str = "6B8B4567";
+/// M2 is mandatory, but a sink that skips it is not worth losing: after this we go on.
+const M2_WAIT: Duration = Duration::from_secs(5);
 
 /// Limits the user chose (latency mode) and where the stream comes from.
 #[derive(Debug, Clone)]
@@ -31,7 +32,9 @@ pub struct Negotiated {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Event {
+    /// The sink sent PLAY, also when it comes back from standby.
     Play,
+    /// The sink sent PAUSE or announced `wfd_standby`: it stopped showing the stream.
     Pause,
     /// The sink lost a frame and needs a full picture now.
     IdrRequest,
@@ -40,66 +43,59 @@ pub enum Event {
 
 pub struct Session<S> {
     pub(crate) link: Link<S>,
-    pub(crate) url: String,
-    /// When the next keep-alive goes out, and the one still waiting for its answer.
+    pub(crate) info: SinkInfo,
+    /// When the next keep-alive goes out, the one still waiting for its answer, and how
+    /// many in a row went unanswered.
     pub(crate) ping_at: Option<tokio::time::Instant>,
     pub(crate) pending: Option<(u32, tokio::time::Instant)>,
+    pub(crate) misses: u8,
 }
 
 impl<S: AsyncRead + AsyncWrite> Session<S> {
-    /// Runs M1-M7 on a connection the sink opened to our port 7236.
+    /// Runs M1-M7 on a connection the sink opened to our port 7236. Requests the sink sends
+    /// ahead of time (M2 before answering M1, SETUP before answering M5) are kept for their
+    /// turn instead of being lost.
     pub async fn negotiate(stream: S, wanted: &Wanted) -> Result<(Self, Negotiated), Error> {
         let mut link = Link::new(stream);
         let url = format!("rtsp://{}/wfd1.0/streamid=0", wanted.local_ip);
 
+        link.hold = &["OPTIONS", "SETUP", "PLAY"];
         let m1 = Message::request("OPTIONS", "*", link.next_cseq()).header("Require", "org.wfa.wfd1.0");
-        link.call("M1", m1, default_answer).await?;
-        let m2 = link.expect("M2", "OPTIONS", default_answer).await?;
-        link.send(&Message::reply(&m2, 200, "OK").header("Public", PUBLIC)).await?;
-
-        let m3 = Message::request("GET_PARAMETER", "rtsp://localhost/wfd1.0", link.next_cseq())
-            .with_body(M3_ASK.into());
-        let caps = link.call("M3", m3, default_answer).await?.body;
-        let formats = params::get(&caps, "wfd_video_formats").unwrap_or("none");
-        let video = video::choose(formats, wanted.max_height, wanted.max_fps)?;
-        let audio = wanted.audio.then(|| audio::choose(params::get(&caps, "wfd_audio_codecs")?)).flatten();
-        let ports = params::get(&caps, "wfd_client_rtp_ports").unwrap_or("");
-        let mut rtp_port = params::rtp_port(ports).unwrap_or(19000);
-
-        let mut chosen = vec![
-            ("wfd_video_formats", video.to_param()),
-            ("wfd_presentation_URL", format!("{url} none")),
-            ("wfd_client_rtp_ports", format!("RTP/AVP/UDP;unicast {rtp_port} 0 mode=play")),
-        ];
-        if let Some(a) = audio {
-            chosen.insert(1, ("wfd_audio_codecs", a.to_param().into()));
+        let mut vendor = caps::names_vendor(&link.call("M1", m1).await?);
+        link.hold = &["SETUP", "PLAY"];
+        match link.expect("M2", "OPTIONS", M2_WAIT).await {
+            Ok(m2) => {
+                vendor |= caps::names_vendor(&m2);
+                link.send(&link.answer(&m2)).await?;
+            }
+            Err(Error::Timeout(_)) => {}
+            Err(e) => return Err(e),
         }
-        let m4 = Message::request("SET_PARAMETER", "rtsp://localhost/wfd1.0", link.next_cseq())
-            .with_body(params::body(&chosen));
-        link.call("M4", m4, default_answer).await?;
 
-        let mut session = Self { link, url, ping_at: None, pending: None };
+        let found = caps::ask(&mut link, vendor).await?;
+        let mut got = caps::choose(&found, wanted)?;
+        caps::offer(&mut link, &url, &mut got).await?;
+
+        let info = SinkInfo::from_caps(&found);
+        let mut session = Self { link, info, ping_at: None, pending: None, misses: 0 };
         session.trigger("M5", "SETUP").await?;
-        let m6 = session.link.expect("M6", "SETUP", default_answer).await?;
+        let m6 = session.link.expect("M6", "SETUP", REPLY_WAIT).await?;
         let transport = m6.get("Transport").unwrap_or("RTP/AVP/UDP;unicast").to_owned();
-        rtp_port = params::rtp_port(&transport).unwrap_or(rtp_port);
+        got.rtp_port = params::rtp_port(&transport).unwrap_or(got.rtp_port);
         let reply = Message::reply(&m6, 200, "OK")
-            // No `;timeout=`: several sinks misread it (gnome-network-displays drops it too).
-            .header("Session", SESSION_ID)
+            .header("Session", format!("{SESSION_ID};timeout={SESSION_TIMEOUT}"))
             .header("Transport", format!("{transport};server_port=5000-5001"));
         session.link.send(&reply).await?;
 
-        let m7 = session.link.expect("M7", "PLAY", default_answer).await?;
-        let reply = Message::reply(&m7, 200, "OK").header("Session", SESSION_ID);
-        session.link.send(&reply).await?;
-        Ok((session, Negotiated { video, audio, rtp_port }))
+        session.link.hold = &[];
+        let m7 = session.link.expect("M7", "PLAY", REPLY_WAIT).await?;
+        session.link.session = Some(SESSION_ID);
+        session.link.send(&session.link.answer(&m7)).await?;
+        Ok((session, got))
     }
 
-    /// M5: asks the sink to send SETUP, PLAY, PAUSE or TEARDOWN.
-    pub async fn trigger(&mut self, step: &'static str, method: &str) -> Result<(), Error> {
-        let body = params::body(&[("wfd_trigger_method", method.into())]);
-        let req = Message::request("SET_PARAMETER", "rtsp://localhost/wfd1.0", self.link.next_cseq())
-            .with_body(body);
-        self.link.call(step, req, default_answer).await.map(drop)
+    /// What the sink told about itself in M3: name, connector, EDID, vendor parameters.
+    pub fn sink_info(&self) -> &SinkInfo {
+        &self.info
     }
 }

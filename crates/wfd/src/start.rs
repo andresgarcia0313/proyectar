@@ -18,16 +18,23 @@ impl fmt::Display for Start {
     }
 }
 
+/// Tolerant of extra spaces and of `rtsp/1.0` in lower case; methods come out upper case
+/// so `get_parameter` from a lax sink is still a GET_PARAMETER.
 pub(crate) fn parse_start(line: &str) -> Result<Start, Error> {
     let bad = || Error::Malformed(line.to_owned());
-    let mut parts = line.splitn(3, ' ');
-    let (a, b, c) = (parts.next().ok_or_else(bad)?, parts.next().ok_or_else(bad)?, parts.next());
-    if a.starts_with("RTSP/") {
+    let mut parts = line.split_whitespace();
+    let (a, b) = (parts.next().ok_or_else(bad)?, parts.next().ok_or_else(bad)?);
+    let rest = parts.collect::<Vec<_>>().join(" ");
+    if is_version(a) {
         let code = b.parse().map_err(|_| bad())?;
-        return Ok(Start::Response { code, reason: c.unwrap_or("").to_owned() });
+        return Ok(Start::Response { code, reason: rest });
     }
-    if c.is_some_and(|v| v.starts_with("RTSP/")) {
-        return Ok(Start::Request { method: a.to_owned(), uri: b.to_owned() });
+    if is_version(&rest) {
+        return Ok(Start::Request { method: a.to_ascii_uppercase(), uri: b.to_owned() });
     }
     Err(bad())
+}
+
+fn is_version(word: &str) -> bool {
+    word.get(..5).is_some_and(|p| p.eq_ignore_ascii_case("RTSP/"))
 }

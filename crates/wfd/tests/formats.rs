@@ -24,7 +24,8 @@ fn baseline_only_sink_with_several_codec_entries() {
 fn audio_prefers_aac_then_lpcm() {
     assert_eq!(audio::choose("LPCM 00000003 00, AAC 00000001 00"), Some(wfd::AudioCodec::Aac));
     assert_eq!(audio::choose("LPCM 00000002 00"), Some(wfd::AudioCodec::Lpcm));
-    assert_eq!(audio::choose("AC3 00000001 00"), None);
+    assert_eq!(audio::choose("AC3 00000001 00"), Some(wfd::AudioCodec::Lpcm), "mandatory LPCM");
+    assert_eq!(audio::choose(" NONE "), None);
 }
 
 #[test]
