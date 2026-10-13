@@ -3,6 +3,7 @@
 
 use crate::busqueda::encontrar;
 use crate::ciclo::Ciclo;
+use crate::diagnostico::{Causa, Diagnostico};
 use crate::recientes::Recientes;
 use crate::wifi_direct::WifiDirect;
 use crate::{Avisar, Aviso, Estado, Opciones};
@@ -31,6 +32,7 @@ impl Activa {
         let pantalla = match encontrar(&wd, mac).await {
             Ok(p) => p,
             Err(fallo) => {
+                avisar(Aviso::Diagnostico(Diagnostico::de(&fallo, Causa::SinRespuestaTv)));
                 avisar(Aviso::Error(format!("No se pudo conectar: {fallo}")));
                 return None;
             }
