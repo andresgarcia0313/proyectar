@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  QMAKE: /usr/bin/qmake6
+
+jobs:
+  build-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config \
+            qt6-base-dev qt6-base-private-dev qt6-declarative-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
+            gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt
+          rustup default stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Build
+        run: cargo build --workspace --locked
+
+      - name: Test wfd
+        run: cargo test -p wfd --locked
+
+      - name: Test motor (unit)
+        run: cargo test -p motor --lib --locked

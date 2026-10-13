@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=Proyectar
+GenericName=Pantalla inalámbrica
+GenericName[en]=Wireless display
+Comment=Proyecta la pantalla en un televisor por Miracast, como Win+K
+Comment[en]=Cast the screen to a TV over Miracast, like Win+K
+Exec=proyectar
+Icon=com.ingeniumcodex.proyectar
+Terminal=false
+Categories=Utility;Qt;
+Keywords=miracast;proyectar;televisor;tv;cast;pantalla;inalámbrica;wireless;display;samsung;
+StartupNotify=true
+StartupWMClass=proyectar
+SingleMainWindow=true

@@ -1,0 +1,16 @@
+module Proyectar
+singleton Theme 1.0 Theme.qml
+FocusRing 1.0 FocusRing.qml
+Icon 1.0 Icon.qml
+IconButton 1.0 IconButton.qml
+PrimaryButton 1.0 PrimaryButton.qml
+ThemedSwitch 1.0 ThemedSwitch.qml
+Segmented 1.0 Segmented.qml
+SenalBars 1.0 SenalBars.qml
+PantallaRow 1.0 PantallaRow.qml
+PantallaLista 1.0 PantallaLista.qml
+TarjetaProyeccion 1.0 TarjetaProyeccion.qml
+Estadisticas 1.0 Estadisticas.qml
+Opciones 1.0 Opciones.qml
+ErrorBanner 1.0 ErrorBanner.qml
+MainWindow 1.0 MainWindow.qml

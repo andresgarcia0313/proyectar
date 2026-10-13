@@ -1,0 +1,5 @@
+target/
+*.log
+.claude/
+.memsearch/
+.qmlls.ini

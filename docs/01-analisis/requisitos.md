@@ -1,0 +1,78 @@
+---
+lang: es-CO
+título: Proyectar - Especificación de requisitos
+versión: 1.0.1
+---
+
+# Proyectar - Especificación de requisitos
+
+## Control de cambios
+
+| Versión | Fecha | Autor | Descripción del cambio |
+| --- | --- | --- | --- |
+| 1.0.0 | 2026-10-12 | Andrés García | Versión inicial: visión, funciones de Windows a igualar, requisitos, exclusiones y riesgos |
+| 1.0.1 | 2026-10-12 | Andrés García | Limpieza para publicar: equipos de referencia sin datos del hogar ni nombres de equipos |
+
+## 1. Visión
+
+Proyectar es una aplicación de escritorio para Linux (probada en Plasma 6 sobre Wayland) que envía la pantalla y el
+audio del computador a un televisor Miracast, con la misma sencillez de Win+K en Windows y la menor
+latencia posible. Actúa como **emisor** (en la terminología del estándar, *source*) de Wi-Fi Display
+(WFD), el protocolo de Miracast. Núcleo en Rust, interfaz en Qt 6 con QML.
+
+**Equipos de referencia:** emisor portátil con Wi-Fi Realtek RTL8852BE (P2P) y GPU Intel Iris Xe con
+codificador H.264 de bajo consumo; receptor televisor Samsung serie TU7000 (2020, Tizen).
+
+## 2. Lo que hace Windows (Win+K y Win+P)
+
+Windows no ofrece ninguna API pública de emisor Miracast: la emisión vive en el sistema y solo la usa
+la barra de Win+K. Por eso Proyectar implementa WFD completo. Fuente: observación de un equipo
+con Windows 11 23H2 y documentación de Microsoft.
+
+## 3. Requisitos funcionales (prioridad MoSCoW: debe, debería, podría, no hará)
+
+| Id | Función de Windows a igualar | Requisito | Criterio de aceptación | Prioridad |
+| --- | --- | --- | --- | --- |
+| RF-01 | Lista de pantallas (Win+K) | Descubrir receptores por Wi-Fi Direct y listarlos con nombre y señal | Con la TV en Screen Mirroring, aparece por nombre en menos de 10 s y desaparece al apagarla | Debe |
+| RF-02 | Conectar | Enlazar por Wi-Fi Direct y negociar WFD (M1 a M7) | Tras aceptar en la TV, la imagen sale en menos de 15 s; la Wi-Fi normal sigue conectada | Debe |
+| RF-03 | Transmitir imagen y audio | Video H.264 por GPU y audio AAC o LPCM en MPEG-TS sobre RTP | 1080p30 sin cortes durante 30 min; nunca se emite solo video (Samsung lo rechaza) | Debe |
+| RF-04 | Desconectar | Cerrar la sesión (TEARDOWN) y bajar el enlace | La TV vuelve a su fuente anterior en menos de 3 s y no queda conexión de NetworkManager | Debe |
+| RF-05 | Duplicar (Win+P) | Enviar una pantalla existente | La TV muestra lo mismo que el portátil | Debe |
+| RF-06 | Extender (Win+P) | Crear un monitor virtual con el portal de KDE | Aparece una pantalla nueva en Plasma y la TV la muestra; al desconectar desaparece | Debería |
+| RF-07 | Solo segunda pantalla | Apagar la pantalla del portátil mientras se proyecta | Se deja fuera de la 0.1.0: exige tocar la configuración de pantallas de Plasma | Podría |
+| RF-08 | Cambiar modo (receptor) | Perfiles de latencia Juegos, Trabajo y Videos (720p60, 1080p30, 1080p60) cambiables sin reconectar | Cambio visible en menos de 3 s; los kbps y la resolución coinciden con el perfil | Debería |
+| RF-09 | Recuperación | Reintentar o reconectar solos ante caída del enlace, de la captura o del codificador | Apagar y encender el Wi-Fi P2P: la imagen vuelve sin acción del usuario en menos de 20 s | Debe |
+| RF-10 | Dispositivo emparejado | Recordar las últimas pantallas y los permisos de captura | Segunda conexión sin diálogo del portal cuando hay token guardado | Debería |
+| RF-11 | Cursor | Cursor del ratón visible en el video | Cursor incrustado en la imagen (Windows lo envía por canal aparte; se deja para después) | Debe |
+| RF-12 | Seguridad de enlace | Aceptación en pantalla de la TV por WPS pulsador, sin PIN | Conexión sin pedir PIN; PIN opcional | Podría |
+| RF-13 | Estado y errores | Mostrar fase, resolución, fps, kbps y si se usa GPU; errores en español claro | El panel refleja los cambios en menos de 1 s | Debe |
+
+## 4. Requisitos no funcionales
+
+| Id | Requisito | Medida | Prioridad |
+| --- | --- | --- | --- |
+| RNF-01 | Latencia de extremo a extremo (captura a pantalla de la TV) | Tope de la especificación: 250 ms. Meta propia: 150 ms o menos en modo Trabajo | Debe |
+| RNF-02 | Codificación por GPU (VA-API, `vah264lpenc`), con cadena de reserva por software | Uso de CPU del proceso inferior a 25 % de un núcleo en 1080p30 | Debe |
+| RNF-03 | El motor nunca bloquea la interfaz | Toda orden devuelve en menos de 50 ms; los resultados llegan por avisos | Debe |
+| RNF-04 | Compatibilidad con el servidor RTSP de la TV Samsung | Tolera `Content-Length` duplicado y respeta el diseño MPEG-TS (PID 0x1000, 0x1011, 0x1100) | Debe |
+| RNF-05 | Seguridad de red | Solo se abre el TCP 7236 en interfaces `p2p-*`; sin servicios en la LAN | Debe |
+| RNF-06 | Sin sonido inesperado | Con audio desactivado se envía silencio, no se corta la pista | Debe |
+| RNF-07 | Archivos de código nuevos de 100 líneas o menos; formato, lint y pruebas en verde | `cargo fmt`, `clippy`, `cargo test` sin avisos | Debe |
+
+## 5. Lo que no aplica
+
+| Función de Windows | Decisión | Motivo |
+| --- | --- | --- |
+| HDCP (High-bandwidth Digital Content Protection, protección de contenido) | No hará | Exige licencia y el contenido protegido no se emite desde Linux; se declara `wfd_content_protection: none` |
+| UIBC (User Input Back Channel, teclado y ratón desde la TV) | No hará | El televisor Samsung de referencia no devuelve entrada; los mensajes M10 a M15 quedan sin implementar |
+| MICE (Miracast over Infrastructure, TCP 7250) | No hará | La TV no anuncia MICE; Wi-Fi Direct cubre el caso |
+| Modo receptor (recibir pantallas) | No hará | Fuera del alcance: Proyectar solo emite |
+| Canal propio de imagen del cursor | Podría | Mejora menor; el cursor incrustado basta |
+
+## 6. Riesgos
+
+| Riesgo | Efecto | Respuesta |
+| --- | --- | --- |
+| La TV rechaza la sesión con el diseño MPEG-TS de `mpegtsmux` | Pantalla negra | `mpegtsmux` no fija `version_number=1` en PAT y PMT; reserva con el muxer de ffmpeg |
+| El portal de KDE crea el monitor virtual a 1920x1080 sin opción de tamaño | 720p exige escalar | Escalar con `vapostproc` y guardar el token para reutilizar el tamaño |
+| El driver Wi-Fi pierde el grupo P2P | Corte de imagen | Recuperación RF-09 |

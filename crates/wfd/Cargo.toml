@@ -1,0 +1,15 @@
+[package]
+name = "wfd"
+description = "Wi-Fi Display (Miracast) source protocol: RTSP control, capability negotiation and IEs."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

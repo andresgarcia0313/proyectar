@@ -1,0 +1,89 @@
+//! Builds the pipeline from its description and wires the measuring probe and the error bus.
+
+use crate::fallo::{Fallo, Resultado};
+use crate::medios_cadena::{descripcion, PID_AUDIO, PID_PMT, PID_VIDEO};
+use crate::medios_estado::{clasificar, Aviso, Contador};
+use crate::medios_tipos::{Codificador, Origen};
+use crate::modo::Perfil;
+use crate::prioridad;
+use gstreamer as gst;
+use gstreamer::prelude::*;
+use std::net::SocketAddr;
+use std::os::fd::{AsRawFd, OwnedFd};
+use std::sync::Arc;
+use tokio::sync::watch;
+use wfd::{AudioCodec, VideoMode};
+
+pub struct Montaje {
+    pub tuberia: gst::Pipeline,
+    pub fd: Option<OwnedFd>,
+    pub contador: Arc<Contador>,
+    pub aviso: watch::Receiver<Aviso>,
+}
+
+fn medios(e: impl std::fmt::Display) -> Fallo {
+    Fallo::Medios(e.to_string())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn montar(
+    origen: Origen,
+    destino: SocketAddr,
+    modo: &VideoMode,
+    audio: Option<AudioCodec>,
+    perfil: Perfil,
+    cod: Codificador,
+    sonido_tv: bool,
+) -> Resultado<Montaje> {
+    gst::init().map_err(medios)?;
+    let texto = descripcion(&origen, destino, modo, audio, perfil, cod, sonido_tv);
+    let tuberia = gst::parse::launch(&texto)
+        .map_err(|e| match e.to_string() {
+            d if d.contains(cod.nombre()) || d.contains("link pre to cod") || d.contains("vapostproc") => {
+                Fallo::Codificador { codificador: cod.nombre(), detalle: d }
+            }
+            d => Fallo::Medios(d),
+        })?
+        .downcast::<gst::Pipeline>()
+        .map_err(|_| medios("la descripción no es una tubería"))?;
+    let fd = match origen {
+        Origen::PipeWire { fd, .. } => Some(fd),
+        Origen::Prueba => None,
+    };
+    let elemento = |n: &str| tuberia.by_name(n).ok_or_else(|| medios(format!("falta {n}")));
+    if let Some(fd) = &fd {
+        elemento("fuente")?.set_property("fd", fd.as_raw_fd());
+    }
+    let programa = gst::Structure::builder("program_map")
+        .field(format!("sink_{PID_VIDEO}"), 1u32)
+        .field(format!("sink_{PID_AUDIO}"), 1u32)
+        .field("PMT_1", PID_PMT)
+        .build();
+    elemento("mux")?.set_property("prog-map", &programa);
+
+    let contador = Arc::new(Contador::nuevo());
+    let c = contador.clone();
+    let sonda = elemento("analizador")?.static_pad("src").ok_or_else(|| medios("sin salida"))?;
+    sonda.add_probe(gst::PadProbeType::BUFFER, move |_, info| {
+        if let Some(gst::PadProbeData::Buffer(b)) = &info.data {
+            c.sumar(b.size());
+        }
+        gst::PadProbeReturn::Ok
+    });
+    let (tx, aviso) = watch::channel(None);
+    let runtime = tokio::runtime::Handle::try_current().ok();
+    tuberia.bus().ok_or_else(|| medios("sin bus"))?.set_sync_handler(move |_, msg| {
+        match msg.view() {
+            gst::MessageView::Error(e) => {
+                tx.send_if_modified(|v| v.is_none().then(|| *v = Some(clasificar(e))).is_some());
+            }
+            // Posted from inside each new streaming thread: the moment to raise it.
+            gst::MessageView::StreamStatus(s) if s.get().0 == gst::StreamStatusType::Enter => {
+                prioridad::subir_este_hilo(&runtime);
+            }
+            _ => {}
+        }
+        gst::BusSyncReply::Drop
+    });
+    Ok(Montaje { tuberia, fd, contador, aviso })
+}
