@@ -87,7 +87,7 @@ pub async fn intentar(cx: Contexto<'_>) -> Resultado<Fin> {
         let (formato, cod) = (format!("{acordado:?}"), cx.codificador.nombre());
         registro::anotar(
             "transmitiendo",
-            json!({"formato": formato, "codificador": cod, "opciones": opciones}),
+            json!({"formato": formato, "codificador": cod, "opciones": opciones, "receptor": format!("{:?}", sesion.sink_info())}),
         );
         *cx.fase = Causa::EnlaceCaido;
         estado(|nombre| Estado::Proyectando { nombre });

@@ -4,6 +4,9 @@ use crate::link::{Link, PUBLIC};
 use crate::rtsp::Message;
 use crate::Error;
 use std::time::Duration;
+
+/// Early requests kept for their turn; the oldest is dropped beyond this.
+const MAX_HELD: usize = 8;
 use tokio::io::{AsyncRead, AsyncWrite};
 
 impl<S: AsyncRead + AsyncWrite> Link<S> {
@@ -12,6 +15,10 @@ impl<S: AsyncRead + AsyncWrite> Link<S> {
     pub async fn handle(&mut self, step: &'static str, req: Message) -> Result<(), Error> {
         let method = req.method().unwrap_or_default().to_owned();
         if self.hold.iter().any(|m| m.eq_ignore_ascii_case(&method)) {
+            // Bounded: a sink that repeats itself must not grow memory without end.
+            if self.held.len() >= MAX_HELD {
+                self.held.pop_front();
+            }
             self.held.push_back(req);
             return Ok(());
         }
