@@ -27,6 +27,8 @@ mod prioridad;
 mod proyeccion;
 pub mod recientes;
 pub mod registro;
+pub mod salida_audio;
+mod salida_audio_cmd;
 mod sesion;
 mod transmision;
 mod vigia;
