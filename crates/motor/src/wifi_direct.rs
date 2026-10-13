@@ -23,6 +23,7 @@ impl WifiDirect {
             let device = DeviceProxy::builder(&conn).path(path.clone())?.build().await?;
             if device.device_type().await? == DEVICE_TYPE_P2P {
                 let p2p = WifiP2PProxy::builder(&conn).path(path.clone())?.build().await?;
+                tokio::spawn(crate::vigia::vigilar(conn.clone(), path.clone()));
                 return Ok(Self { conn, nm, p2p, device: path });
             }
         }

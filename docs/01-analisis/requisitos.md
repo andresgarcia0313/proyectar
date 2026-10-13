@@ -1,7 +1,7 @@
 ---
 lang: es-CO
 título: Proyectar - Especificación de requisitos
-versión: 1.0.1
+versión: 1.1.0
 ---
 
 # Proyectar - Especificación de requisitos
@@ -12,6 +12,7 @@ versión: 1.0.1
 | --- | --- | --- | --- |
 | 1.0.0 | 2026-10-12 | Andrés García | Versión inicial: visión, funciones de Windows a igualar, requisitos, exclusiones y riesgos |
 | 1.0.1 | 2026-10-12 | Andrés García | Limpieza para publicar: equipos de referencia sin datos del hogar ni nombres de equipos |
+| 1.1.0 | 2026-10-13 | Andrés García | Primera prueba con TV real: RF-14 a RF-17 y hoja de ruta tomada del emisor de Windows |
 
 ## 1. Visión
 
@@ -46,6 +47,10 @@ con Windows 11 23H2 y documentación de Microsoft.
 | RF-11 | Cursor | Cursor del ratón visible en el video | Cursor incrustado en la imagen (Windows lo envía por canal aparte; se deja para después) | Debe |
 | RF-12 | Seguridad de enlace | Aceptación en pantalla de la TV por WPS pulsador, sin PIN | Conexión sin pedir PIN; PIN opcional | Podría |
 | RF-13 | Estado y errores | Mostrar fase, resolución, fps, kbps y si se usa GPU; errores en español claro | El panel refleja los cambios en menos de 1 s | Debe |
+| RF-14 | Fases y diagnóstico | Mostrar el paso en curso (invitar, enlazar, abrir video, proyectar), preguntar si apareció "Permitir" en la TV y, al fallar, decir en qué paso y qué revisar | Cada fallo de la prueba real queda explicado sin leer bitácoras del sistema | Debe |
+| RF-15 | Registro de eventos | Una línea JSON por evento en `~/.local/state/proyectar/eventos.jsonl`, con rotación a 4 MB | Un intento fallido se reconstruye paso a paso con `jq` | Debe |
+| RF-16 | Nombre del equipo | Anunciar por Wi-Fi Direct el nombre del equipo y el tipo "Computador" (categoría WPS 1, subcategoría 1), como Windows | La TV muestra el nombre del equipo en el aviso de permitir, no "0" | Debe |
+| RF-17 | Datos del receptor | Pedir en M3 los parámetros opcionales que pide Windows (EDID, conector, modo preferido) y anotarlos | Un receptor que no los conoce no falla; los que responde quedan en el registro | Debería |
 
 ## 4. Requisitos no funcionales
 
@@ -76,3 +81,18 @@ con Windows 11 23H2 y documentación de Microsoft.
 | La TV rechaza la sesión con el diseño MPEG-TS de `mpegtsmux` | Pantalla negra | `mpegtsmux` no fija `version_number=1` en PAT y PMT; reserva con el muxer de ffmpeg |
 | El portal de KDE crea el monitor virtual a 1920x1080 sin opción de tamaño | 720p exige escalar | Escalar con `vapostproc` y guardar el token para reutilizar el tamaño |
 | El driver Wi-Fi pierde el grupo P2P | Corte de imagen | Recuperación RF-09 |
+
+## 7. Hoja de ruta tomada del emisor de Windows
+
+Inspección de solo lectura del emisor de Windows 11 (`winmde.dll` negocia RTSP; `WiFiDisplay.dll` y
+`dafWfdProvider.dll` manejan el enlace). Lo que Windows hace y Proyectar aún no:
+
+| Función de Windows | Evidencia | Viabilidad en Linux | Prioridad |
+| --- | --- | --- | --- |
+| Grupo persistente: reconectar sin aceptar de nuevo | `WFDProfile:persistent`, `IsReconnect` | wpa_supplicant por D-Bus (`persistent`, `Invite`); NetworkManager no lo expone | Debería |
+| Bitrate según los informes RTCP del receptor | `CBandwidthManager::OnRR`, `CRtcpNackSplitter` | `rtpbin` de GStreamer y bitrate en caliente | Debería |
+| Cambio de formato sin reconectar | `OnDynamicFormatChange`, `microsoft_format_change_capability` | Capa RTSP (M4 nuevo dentro de la sesión) | Podría |
+| Canal del grupo junto al de la Wi-Fi normal | `IsInterfaceInMultiChannelConfiguration` | wpa_supplicant (`frequency`, `go_intent`) | Podría |
+| Envío a ritmo constante | `EnableSendTimeSmoothing` | `udpsink` no regula con `sync=false` (medido); exige un elemento propio | Podría |
+| PIN opcional | `PreferPinBasedPairing` | wpa_supplicant | Podría |
+

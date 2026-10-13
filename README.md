@@ -1,7 +1,7 @@
 ---
 lang: es-CO
 título: Proyectar
-versión: 0.1.1
+versión: 0.2.0
 ---
 
 # Proyectar
@@ -20,6 +20,7 @@ paleta Drácula.
 | --- | --- | --- | --- |
 | 0.1.0 | 2026-10-12 | Andrés García | Documentación inicial del proyecto |
 | 0.1.1 | 2026-10-12 | Andrés García | README bilingüe para publicar: funciones, requisitos, GPU, receptores, instalación, cortafuegos y modo demo |
+| 0.2.0 | 2026-10-13 | Andrés García | Nombre del equipo en Wi-Fi Direct (`--sistema`), fases de conexión, diagnóstico y registro de eventos |
 
 ## Qué es
 
@@ -127,10 +128,14 @@ Rust 1.85 o superior con [rustup](https://rustup.rs).
 git clone https://github.com/andresgarcia0313/proyectar.git
 cd proyectar
 empaque/instalar.sh            # binario en ~/.local/bin, icono y lanzador en el menú
+empaque/instalar.sh --sistema  # una vez, con sudo: nombre del equipo en la TV y cortafuegos
 empaque/instalar.sh --quitar   # desinstalar
 ```
 
-El instalador no pide `sudo`: todo queda en la carpeta del usuario. Las opciones y las pantallas
+El instalador no pide `sudo`: todo queda en la carpeta del usuario. La opción `--sistema` es aparte
+porque NetworkManager no fija el nombre Wi-Fi Direct: sin ella wpa_supplicant anuncia un nombre vacío
+y algunos televisores muestran "0" en el aviso de permitir. Instala un script de
+NetworkManager-dispatcher que anuncia el nombre del equipo y el tipo "Computador", como Windows. Las opciones y las pantallas
 recientes se guardan en `~/.config/proyectar/recientes.json`.
 
 ### 3. Cortafuegos
@@ -162,7 +167,22 @@ sudo firewall-cmd --reload
 
 1. En la TV, abra la fuente "Screen Mirroring" (o el equivalente de su marca).
 2. Abra Proyectar desde el menú de aplicaciones y elija la TV en la lista.
-3. Acepte la conexión en la TV con el control remoto.
+3. Acepte la conexión en la TV con el control remoto (solo la primera vez: la TV la recuerda).
+
+Mientras conecta, Proyectar muestra en qué paso va: invitar, enlazar, abrir el video y proyectar.
+
+### Si algo falla
+
+Proyectar explica en qué paso se detuvo y qué revisar (por ejemplo, "El televisor se enlazó pero no
+abrió el video"). Cada paso queda anotado, una línea JSON por evento, en
+`~/.local/state/proyectar/eventos.jsonl`, que se abre desde el botón "Ver registro":
+
+```bash
+jq -c 'select(.evento | test("fallo|p2p_estado|enlace|tv_"))' ~/.local/state/proyectar/eventos.jsonl
+```
+
+`p2p_estado` trae el código de motivo de NetworkManager. `journalctl -u NetworkManager -u wpa_supplicant`
+completa la historia del lado del sistema.
 
 ### Modo demo
 
@@ -282,6 +302,13 @@ sudo ufw allow in on p2p-+ to any port 68 proto udp
 
 For firewalld, create a `proyectar` zone bound to `p2p-+` with ports `7236/tcp`, `67/udp` and `68/udp`
 (commands in the Spanish section above).
+
+### Troubleshooting
+
+Run `empaque/instalar.sh --sistema` once so TVs show this computer's name instead of "0". While
+connecting, Proyectar shows the current step (invite, link, open video, cast); on failure it explains
+which step broke and what to check. Every event is logged as JSON lines in
+`~/.local/state/proyectar/eventos.jsonl`.
 
 ### Usage and demo mode
 

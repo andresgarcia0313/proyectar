@@ -27,6 +27,7 @@ pub mod recientes;
 pub mod registro;
 mod sesion;
 mod transmision;
+mod vigia;
 pub mod wifi_direct;
 
 pub use diagnostico::{Causa, Diagnostico};
