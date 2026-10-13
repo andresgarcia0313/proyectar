@@ -5,8 +5,8 @@ use std::os::fd::OwnedFd;
 use wfd::VideoMode;
 
 pub enum Origen {
-    /// Portal stream: the descriptor the portal gave and the PipeWire node.
-    PipeWire { fd: OwnedFd, nodo: u32 },
+    /// PipeWire node to read; through the portal's descriptor when it gave one (KWin does not).
+    PipeWire { fd: Option<OwnedFd>, nodo: u32 },
     /// Live test pattern, for tests.
     Prueba,
 }
@@ -69,9 +69,10 @@ impl Codificador {
 /// The capture element: the PipeWire stream, or a moving test picture for the tests.
 pub(crate) fn fuente(origen: &Origen, modo: &VideoMode) -> String {
     match origen {
+        // Without media.type WirePlumber cannot link KWin's direct stream ("target not found").
         Origen::PipeWire { nodo, .. } => format!(
-            "pipewiresrc name=fuente path={nodo} do-timestamp=true always-copy=true \
-             keepalive-time={} max-buffers=64 resend-last=true",
+            "pipewiresrc name=fuente path={nodo} do-timestamp=true always-copy=true keepalive-time={} \
+             max-buffers=64 resend-last=true stream-properties=\"props,media.type=Video\"",
             1000 / modo.fps.max(1)
         ),
         Origen::Prueba => format!(

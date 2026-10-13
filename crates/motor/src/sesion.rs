@@ -7,7 +7,7 @@ use crate::control;
 use crate::diagnostico::Causa;
 use crate::enlace::nombre_propio;
 use crate::fallo::{Fallo, Resultado};
-use crate::medios::{Codificador, Medios, Origen};
+use crate::medios::{Codificador, Medios};
 use crate::registro;
 use crate::transmision;
 pub use crate::transmision::pedido;
@@ -73,7 +73,7 @@ pub async fn intentar(cx: Contexto<'_>) -> Resultado<Fin> {
             local_ip: local.ip().to_string(),
         };
         let (sesion, acordado) = wfd::Session::negotiate(tcp, &quiero).await?;
-        let origen = Origen::PipeWire { fd: cx.captura.fd.try_clone()?, nodo: cx.captura.nodo };
+        let origen = cx.captura.origen()?;
         let destino = SocketAddr::new(remoto.ip(), acordado.rtp_port);
         let _salida_tv = crate::salida_audio::SalidaTv::crear(&nombre, opciones.audio);
         let medios = Medios::iniciar(

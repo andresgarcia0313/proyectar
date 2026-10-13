@@ -47,7 +47,7 @@ pub fn montar(
         .downcast::<gst::Pipeline>()
         .map_err(|_| medios("la descripción no es una tubería"))?;
     let fd = match origen {
-        Origen::PipeWire { fd, .. } => Some(fd),
+        Origen::PipeWire { fd, .. } => fd,
         Origen::Prueba => None,
     };
     let elemento = |n: &str| tuberia.by_name(n).ok_or_else(|| medios(format!("falta {n}")));

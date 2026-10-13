@@ -83,12 +83,10 @@ pub struct Estadisticas {
     /// Delay inside this laptop, capture to network, in ms: average and worst of the last second.
     pub retardo_ms: f32,
     pub retardo_peor_ms: f32,
-    /// Capture to encoded frame, in ms.
-    pub retardo_cod_ms: f32,
+    pub retardo_cod_ms: f32, // capture to encoded frame
 }
 
-/// Everything the engine reports, delivered on its own threads: the interface must
-/// queue it to the GUI thread.
+/// Everything the engine reports, from its own threads: queue it to the GUI thread.
 #[derive(Debug, Clone)]
 pub enum Aviso {
     Pantallas(Vec<Pantalla>),
