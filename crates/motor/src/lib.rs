@@ -6,6 +6,7 @@ mod activa;
 mod busqueda;
 pub mod captura;
 mod ciclo;
+mod ciclo_paso;
 mod control;
 pub mod diagnostico;
 pub mod enlace;
@@ -25,6 +26,7 @@ mod proyeccion;
 pub mod recientes;
 pub mod registro;
 mod sesion;
+mod transmision;
 pub mod wifi_direct;
 
 pub use diagnostico::{Causa, Diagnostico};

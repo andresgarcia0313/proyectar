@@ -85,7 +85,11 @@ impl WifiDirect {
         let options = HashMap::from([("persist", Value::from("volatile"))]);
         let (_, active, _) =
             self.nm.add_and_activate_connection2(settings, &self.device, &peer, options).await?;
-        let active = ActiveProxy::builder(&self.conn).path(active)?.build().await?;
+        let active = ActiveProxy::builder(&self.conn)
+            .path(active)?
+            .cache_properties(zbus::proxy::CacheProperties::No)
+            .build()
+            .await?;
         Ok(Enlace { conn: self.conn.clone(), nm: self.nm.clone(), active })
     }
 }

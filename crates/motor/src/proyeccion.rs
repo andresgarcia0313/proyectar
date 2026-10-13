@@ -4,6 +4,7 @@
 use crate::activa::{guardar_opciones, terminar, Activa};
 use crate::busqueda::buscar;
 use crate::recientes::Recientes;
+use crate::registro;
 use crate::wifi_direct::WifiDirect;
 use crate::{Avisar, Aviso, Opciones};
 use std::sync::{Arc, Mutex};
@@ -27,7 +28,7 @@ impl Motor {
     /// Starts the engine's own runtime; `avisar` is called from engine threads.
     pub fn iniciar(avisar: impl Fn(Aviso) + Send + Sync + 'static) -> Self {
         let (ordenes, rx) = mpsc::unbounded_channel();
-        let avisar: Avisar = Arc::new(avisar);
+        let avisar: Avisar = registro::envolver(avisar);
         let hilo = std::thread::Builder::new().name("motor".into());
         let _ = hilo.spawn(move || {
             match tokio::runtime::Builder::new_multi_thread().worker_threads(2).enable_all().build() {

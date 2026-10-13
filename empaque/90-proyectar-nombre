@@ -1,0 +1,18 @@
+#!/bin/sh
+# Proyectar: anuncia por Wi-Fi Direct el nombre del equipo y el tipo "Computador", como hace
+# Windows. NetworkManager no los fija y wpa_supplicant anuncia un nombre vacío, que algunos
+# televisores muestran como "0" en el aviso de permitir la conexión.
+# Script de NetworkManager-dispatcher: corre como root al subir una interfaz o cambiar el nombre.
+case "${2:-up}" in up | hostname) ;; *) exit 0 ;; esac
+nombre=$(hostnamectl --pretty 2>/dev/null)
+[ -n "$nombre" ] || nombre=$(hostname)
+nombre=$(printf %s "$nombre" | cut -c1-32)
+servicio=fi.w1.wpa_supplicant1
+interfaces=$(busctl get-property $servicio /fi/w1/wpa_supplicant1 $servicio Interfaces 2>/dev/null |
+    grep -o '"/[^"]*"' | tr -d '"')
+for ruta in $interfaces; do
+    # Tipo primario WPS: categoría 1 (Computador), OUI 00:50:F2:04, subcategoría 1 (PC).
+    busctl set-property $servicio "$ruta" $servicio.Interface.P2PDevice P2PDeviceConfig 'a{sv}' 2 \
+        DeviceName s "$nombre" PrimaryDeviceType ay 8 0 1 0 80 242 4 0 1 2>/dev/null
+done
+exit 0

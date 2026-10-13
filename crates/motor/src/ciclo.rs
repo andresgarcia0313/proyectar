@@ -2,12 +2,15 @@
 //! fails, applies `Fallo::recovery` (the "catch") so the picture comes back on its own.
 
 use crate::captura::Captura;
-use crate::fallo::{Accion, Resultado};
+use crate::diagnostico::{Causa, Diagnostico};
+use crate::fallo::Accion;
 use crate::medios::Codificador;
 use crate::recientes::Recientes;
-use crate::sesion::{self, Contexto, Fin};
+use crate::registro;
+use crate::sesion::{self, Fin};
 use crate::wifi_direct::{Pantalla, WifiDirect};
 use crate::{Avisar, Aviso, Estado, Opciones};
+use serde_json::json;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::sync::watch;
@@ -30,8 +33,8 @@ impl Ciclo {
     pub async fn correr(mut self) {
         let (mut codificador, mut captura, mut intento) = (Codificador::primero(), None::<Captura>, 0);
         loop {
-            let inicio = Instant::now();
-            let paso = self.paso(&mut captura, codificador).await;
+            let (inicio, mut fase) = (Instant::now(), Causa::Captura);
+            let paso = self.paso(&mut captura, codificador, &mut fase).await;
             let fallo = match paso {
                 Ok(Fin::Terminada) => break,
                 Ok(Fin::Repetir) => continue,
@@ -39,6 +42,11 @@ impl Ciclo {
             };
             intento = if inicio.elapsed() > SANA { 1 } else { intento + 1 };
             let accion = fallo.recovery();
+            registro::anotar(
+                "fallo",
+                json!({"fase": fase, "detalle": fallo.to_string(), "accion": format!("{accion:?}"),
+                "intento": intento, "duro_s": inicio.elapsed().as_secs_f32()}),
+            );
             let rendirse = match accion {
                 Accion::OtroCodificador => codificador.siguiente().map(|otro| codificador = otro).is_none(),
                 Accion::NuevaCaptura => {
@@ -49,6 +57,7 @@ impl Ciclo {
                 Accion::Reintentar(_) | Accion::Reconectar => false,
             };
             if rendirse || intento > MAX_INTENTOS {
+                (self.avisar)(Aviso::Diagnostico(Diagnostico::de(&fallo, fase)));
                 (self.avisar)(Aviso::Error(format!("La proyección se detuvo: {fallo}")));
                 break;
             }
@@ -66,33 +75,5 @@ impl Ciclo {
         }
         Captura::soltar(captura).await;
         (self.avisar)(Aviso::Estado(Estado::Inactivo));
-    }
-
-    /// One session; the capture is asked for once and kept across retries.
-    async fn paso(&mut self, captura: &mut Option<Captura>, codificador: Codificador) -> Resultado<Fin> {
-        let fuente = self.opciones.borrow().fuente;
-        if captura.as_ref().is_some_and(|c| c.fuente != fuente) {
-            Captura::soltar(captura.take()).await;
-        }
-        if captura.is_none() {
-            let token =
-                self.recientes.lock().unwrap_or_else(|e| e.into_inner()).token(fuente).map(str::to_owned);
-            let nueva = Captura::pedir(fuente, token.as_deref()).await?;
-            let mut recientes = self.recientes.lock().unwrap_or_else(|e| e.into_inner());
-            recientes.poner_token(fuente, nueva.token.clone());
-            recientes.guardar();
-            *captura = Some(nueva);
-        }
-        let Some(captura) = captura.as_ref() else { return Ok(Fin::Terminada) };
-        sesion::intentar(Contexto {
-            wd: &self.wd,
-            pantalla: &self.pantalla,
-            captura,
-            codificador,
-            opciones: &mut self.opciones,
-            parar: &mut self.parar,
-            avisar: &*self.avisar,
-        })
-        .await
     }
 }

@@ -44,6 +44,34 @@ pub fn anotar(evento: &str, datos: Value) {
     }
 }
 
+/// Wraps the interface's callback so every report is logged too; logs the start.
+pub fn envolver(avisar: impl Fn(crate::Aviso) + Send + Sync + 'static) -> crate::Avisar {
+    let codificador = crate::medios::Codificador::primero().nombre();
+    let equipo = crate::enlace::nombre_propio();
+    anotar(
+        "inicio",
+        json!({"version": env!("CARGO_PKG_VERSION"), "equipo": equipo, "codificador": codificador}),
+    );
+    std::sync::Arc::new(move |a| {
+        aviso(&a);
+        avisar(a)
+    })
+}
+
+/// What the engine told the interface; numbers and lists go in their own events.
+pub fn aviso(aviso: &crate::Aviso) {
+    use crate::Aviso::*;
+    match aviso {
+        Estado(e) => anotar("estado", json!({"estado": format!("{e:?}")})),
+        Error(texto) => anotar("error", json!({"texto": texto})),
+        Diagnostico(d) => anotar("diagnostico", json!({"diagnostico": d})),
+        Pantallas(l) => {
+            anotar("pantallas", json!({"vistas": l.iter().map(|p| (&p.nombre, p.senal)).collect::<Vec<_>>()}))
+        }
+        Recientes(_) | Estadisticas(_) => {}
+    }
+}
+
 fn abrir() -> Option<File> {
     let ruta = ruta();
     std::fs::create_dir_all(ruta.parent()?).ok()?;
