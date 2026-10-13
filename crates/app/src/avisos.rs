@@ -4,7 +4,7 @@
 use motor::{Estado, Pantalla};
 use serde_json::{json, Value};
 
-/// Codes QML switches on; keep in step with `Proyectar/Estado.qml`.
+/// Codes QML switches on; keep in step with `Proyectar/PasosConexion.qml` and `MainWindow.qml`.
 pub fn codigo(estado: &Estado) -> i32 {
     match estado {
         Estado::Inactivo => 0,

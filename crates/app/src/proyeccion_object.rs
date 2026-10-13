@@ -1,11 +1,8 @@
 //! `Proyeccion`: the QML face of `motor::Motor`. The engine reports from its own threads;
 //! every `Aviso` is queued to the Qt thread, where it becomes properties QML binds to.
 
-use crate::{ajustes, avisos, demo};
-use core::pin::Pin;
-use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::QString;
-use motor::{Aviso, Estado, Motor, Pantalla};
+use motor::{Motor, Pantalla};
 
 #[cxx_qt::bridge]
 pub mod qobject {
@@ -30,12 +27,19 @@ pub mod qobject {
         #[qproperty(i32, latencia)]
         #[qproperty(i32, fuente)]
         #[qproperty(bool, audio)]
+        /// JSON of the last `motor::Diagnostico`, empty when there is none.
+        #[qproperty(QString, diagnostico)]
+        /// Folder holding the event log, for "Ver registro".
+        #[qproperty(QString, ruta_registro, cxx_name = "rutaRegistro")]
         type Proyeccion = super::ProyeccionRust;
 
         #[qinvokable]
         fn buscar(self: &Proyeccion);
         #[qinvokable]
-        fn conectar(self: &Proyeccion, mac: &QString);
+        fn conectar(self: Pin<&mut Proyeccion>, mac: &QString);
+        /// Connects again to the last display tried.
+        #[qinvokable]
+        fn reintentar(self: Pin<&mut Proyeccion>);
         #[qinvokable]
         fn desconectar(self: &Proyeccion);
         #[qinvokable]
@@ -50,6 +54,9 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "descartarError"]
         fn descartar_error(self: Pin<&mut Proyeccion>);
+        #[qinvokable]
+        #[cxx_name = "descartarDiagnostico"]
+        fn descartar_diagnostico(self: Pin<&mut Proyeccion>);
         /// The event loop is alive; the supervisor restarts the app when beats stop.
         #[qinvokable]
         fn beat(self: &Proyeccion);
@@ -74,26 +81,10 @@ pub struct ProyeccionRust {
     pub(crate) latencia: i32,
     pub(crate) fuente: i32,
     pub(crate) audio: bool,
+    pub(crate) diagnostico: QString,
+    pub(crate) ruta_registro: QString,
+    pub(crate) ultima_mac: String,
     pub(crate) motor: Option<Motor>,
     pub(crate) cercanas: Vec<Pantalla>,
     pub(crate) recientes: Vec<Pantalla>,
-}
-
-impl cxx_qt::Initialize for qobject::Proyeccion {
-    fn initialize(mut self: Pin<&mut Self>) {
-        let guardadas = ajustes::cargar();
-        self.as_mut().set_latencia(guardadas.latencia as i32);
-        self.as_mut().set_fuente(guardadas.fuente as i32);
-        self.as_mut().set_audio(guardadas.audio);
-        self.as_mut().set_texto(QString::from(avisos::texto(&Estado::Inactivo).as_str()));
-        let hilo = self.qt_thread();
-        let enviar = move |aviso: Aviso| {
-            let _ = hilo.queue(move |mut objeto| objeto.as_mut().recibir(aviso));
-        };
-        if let Some(escena) = std::env::var("PROYECTAR_DEMO").ok().filter(|s| !s.is_empty()) {
-            demo::reproducir(&escena, enviar);
-        } else {
-            self.as_mut().rust_mut().motor = Some(Motor::iniciar(enviar));
-        }
-    }
 }

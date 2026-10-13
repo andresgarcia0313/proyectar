@@ -1,8 +1,8 @@
 //! `PROYECTAR_DEMO=<escena>` feeds the interface with made-up reports instead of starting
-//! the engine, to review screens and take screenshots without a TV: `lista`, `conectando`,
-//! `proyectando`, `reconectando`, `error`, `vacia`.
+//! the engine, to review screens and take screenshots without a TV: `lista`, `invitando`,
+//! `conectando`, `negociando`, `proyectando`, `reconectando`, `error`, `diagnostico`, `vacia`.
 
-use motor::{Aviso, Estadisticas, Estado, Pantalla};
+use motor::{Aviso, Causa, Diagnostico, Estadisticas, Estado, Fallo, Pantalla};
 
 fn pantalla(nombre: &str, mac: &str, senal: u8) -> Pantalla {
     Pantalla { nombre: nombre.into(), mac: mac.into(), senal, ruta: String::new() }
@@ -20,7 +20,10 @@ pub fn reproducir(escena: &str, enviar: impl Fn(Aviso)) {
         enviar(Aviso::Recientes(vec![cercanas[0].clone()]));
     }
     let estado = match escena {
+        "invitando" => Estado::Conectando { nombre: sala() },
         "conectando" => Estado::EsperandoPantalla { nombre: sala() },
+        "negociando" => Estado::Negociando { nombre: sala() },
+        "diagnostico" => Estado::Inactivo,
         "proyectando" | "error" => Estado::Proyectando { nombre: sala() },
         "reconectando" => Estado::Reconectando { nombre: sala(), intento: 2 },
         _ => Estado::Buscando,
@@ -37,5 +40,10 @@ pub fn reproducir(escena: &str, enviar: impl Fn(Aviso)) {
     }
     if escena == "error" {
         enviar(Aviso::Error("La pantalla cerró la conexión. Revisa que el televisor siga encendido.".into()));
+    }
+    if escena == "diagnostico" {
+        // The bare error must give way to the diagnosis that follows it.
+        enviar(Aviso::Error("El televisor no respondió.".into()));
+        enviar(Aviso::Diagnostico(Diagnostico::de(&Fallo::SinRespuesta, Causa::SinRespuestaTv)));
     }
 }

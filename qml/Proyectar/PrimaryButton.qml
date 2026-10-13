@@ -8,7 +8,9 @@ AbstractButton {
     property string iconName
     property color fill: Theme.accent
     property color labelColor: Theme.accentLabel
-    implicitWidth: Math.max(148, row.implicitWidth + Theme.s6)
+    // Secondary buttons beside a primary one can go below the usual pill width.
+    property int anchoMinimo: 148
+    implicitWidth: Math.max(anchoMinimo, row.implicitWidth + Theme.s6)
     implicitHeight: 44
     hoverEnabled: true
     focusPolicy: Qt.StrongFocus
