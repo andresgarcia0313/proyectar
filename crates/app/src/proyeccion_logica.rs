@@ -7,7 +7,7 @@ use cxx_qt_lib::QString;
 use motor::{Aviso, Estado, Fuente, Latencia, Opciones};
 
 impl qobject::Proyeccion {
-    fn opciones(&self) -> Opciones {
+    pub(crate) fn opciones(&self) -> Opciones {
         Opciones {
             latencia: [Latencia::Juegos, Latencia::Trabajo, Latencia::Videos]
                 .get(self.latencia as usize)
@@ -33,7 +33,7 @@ impl qobject::Proyeccion {
                 self.as_mut().set_kbps(i32::try_from(e.kbps).unwrap_or(i32::MAX));
                 return self.set_gpu(e.gpu);
             }
-            Aviso::Diagnostico(_) => {}
+            Aviso::Diagnostico(d) => return self.mostrar_diagnostico(&d),
             Aviso::Error(mensaje) => return self.set_ultimo_error(QString::from(mensaje.as_str())),
         }
         let json = avisos::lista_json(&self.cercanas, &self.recientes);
@@ -44,7 +44,9 @@ impl qobject::Proyeccion {
         self.as_mut().set_codigo(avisos::codigo(estado));
         self.as_mut().set_texto(QString::from(avisos::texto(estado).as_str()));
         self.as_mut().set_nombre(QString::from(avisos::nombre(estado).as_str()));
-        if !matches!(estado, Estado::Proyectando { .. }) {
+        if matches!(estado, Estado::Proyectando { .. }) {
+            self.as_mut().set_diagnostico(QString::default());
+        } else {
             self.as_mut().set_hay_estadisticas(false);
         }
     }
@@ -52,12 +54,6 @@ impl qobject::Proyeccion {
     pub fn buscar(&self) {
         if let Some(motor) = &self.rust().motor {
             motor.buscar();
-        }
-    }
-
-    pub fn conectar(&self, mac: &QString) {
-        if let Some(motor) = &self.rust().motor {
-            motor.conectar(mac.to_string(), self.opciones());
         }
     }
 

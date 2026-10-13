@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 
-// The projection in progress: where it goes, how it is going, and the way out.
+// The projection in progress: where it goes, which step it is on, and the way out.
 Rectangle {
     id: card
     property int codigo: 0
@@ -29,15 +29,11 @@ Rectangle {
         Rectangle {
             Layout.alignment: Qt.AlignHCenter
             Layout.preferredWidth: 64; Layout.preferredHeight: 64
+            // Room for the question card: the step indicator already says what is going on.
+            visible: !pregunta.visible
             radius: 32
             color: Theme.tint(card.tono, 0.16)
             Icon { anchors.centerIn: parent; glyph: "tv"; size: 30; color: card.tono }
-            SequentialAnimation on opacity {
-                running: !card.proyectando && !Theme.reduceMotion
-                loops: Animation.Infinite
-                NumberAnimation { to: 0.45; duration: Theme.slow; easing.type: Easing.InOutQuad }
-                NumberAnimation { to: 1; duration: Theme.slow; easing.type: Easing.InOutQuad }
-            }
         }
         Text {
             textFormat: Text.PlainText
@@ -60,6 +56,17 @@ Rectangle {
             text: card.nombre
             color: Theme.textMuted
             font.pointSize: Theme.label
+        }
+        PasosConexion {
+            Layout.fillWidth: true
+            Layout.topMargin: Theme.s1
+            codigo: card.codigo
+            tono: card.tono
+        }
+        PreguntaPermitir {
+            id: pregunta
+            Layout.fillWidth: true
+            invitando: card.codigo === 2
         }
         Estadisticas {
             Layout.fillWidth: true

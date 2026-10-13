@@ -33,6 +33,7 @@ QtObject {
     readonly property int s3: 12
     readonly property int s4: 16
     readonly property int s5: 24
+    readonly property int s6: 32
 
     readonly property int radiusControl: 8
     readonly property int radiusCard: 12

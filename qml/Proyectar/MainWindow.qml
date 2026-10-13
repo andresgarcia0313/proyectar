@@ -8,6 +8,8 @@ Window {
     required property var proy
     property string seleccion
     readonly property bool enLista: proy.codigo < 2
+    // Inviting, linking or opening the video: only the connection and its way out are shown.
+    readonly property bool enCamino: [2, 3, 6].indexOf(proy.codigo) >= 0
     readonly property bool seleccionValida: {
         const f = lista.filas.find(x => x.mac === seleccion)
         return f !== undefined && f.cercana
@@ -48,7 +50,7 @@ Window {
 
         RowLayout {
             Layout.fillWidth: true
-            visible: win.enLista
+            visible: win.enLista && !diagnostico.visible
             spacing: Theme.s2
             Rectangle {
                 width: 8; height: 8; radius: 4
@@ -64,9 +66,20 @@ Window {
             }
         }
 
+        TarjetaDiagnostico {
+            id: diagnostico
+            Layout.fillWidth: true
+            // In place of the list: the steps scroll if the window is short.
+            Layout.fillHeight: true
+            Layout.maximumHeight: implicitHeight
+            json: win.proy.diagnostico
+            rutaRegistro: win.proy.rutaRegistro
+            onReintentar: win.proy.reintentar()
+            onDescartar: win.proy.descartarDiagnostico()
+        }
         ErrorBanner {
             Layout.fillWidth: true
-            message: win.proy.ultimoError
+            message: diagnostico.visible ? "" : win.proy.ultimoError
             onDismissed: win.proy.descartarError()
         }
 
@@ -74,7 +87,7 @@ Window {
             id: lista
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: win.enLista
+            visible: win.enLista && !diagnostico.visible
             pantallasJson: win.proy.pantallas
             buscando: win.proy.codigo === 1
             seleccion: win.seleccion
@@ -83,7 +96,7 @@ Window {
         }
         PrimaryButton {
             Layout.fillWidth: true
-            visible: win.enLista
+            visible: win.enLista && !diagnostico.visible
             enabled: win.seleccionValida
             fill: enabled ? Theme.accent : Theme.selected
             labelColor: enabled ? Theme.accentLabel : Theme.textMuted
@@ -109,6 +122,7 @@ Window {
 
         Opciones {
             Layout.fillWidth: true
+            visible: !win.enCamino
             fuente: win.proy.fuente
             latencia: win.proy.latencia
             audio: win.proy.audio

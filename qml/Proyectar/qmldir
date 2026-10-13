@@ -12,5 +12,9 @@ PantallaLista 1.0 PantallaLista.qml
 TarjetaProyeccion 1.0 TarjetaProyeccion.qml
 Estadisticas 1.0 Estadisticas.qml
 Opciones 1.0 Opciones.qml
+ListaPasos 1.0 ListaPasos.qml
+PasosConexion 1.0 PasosConexion.qml
+PreguntaPermitir 1.0 PreguntaPermitir.qml
+TarjetaDiagnostico 1.0 TarjetaDiagnostico.qml
 ErrorBanner 1.0 ErrorBanner.qml
 MainWindow 1.0 MainWindow.qml
