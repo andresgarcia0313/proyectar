@@ -32,6 +32,8 @@ mod medios_descartes;
 mod medios_estado;
 mod medios_latencia;
 mod medios_lectura;
+mod medios_lpcm;
+mod medios_lpcm_ts;
 mod medios_medidas;
 mod medios_montaje;
 mod medios_nivel;

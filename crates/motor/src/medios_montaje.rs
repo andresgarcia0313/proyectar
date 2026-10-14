@@ -67,6 +67,9 @@ pub fn montar(
         .field("PMT_1", PID_PMT)
         .build();
     elemento("mux")?.set_property("prog-map", &programa);
+    if audio == Some(AudioCodec::Lpcm) {
+        crate::medios_lpcm::instalar(&tuberia).ok_or_else(|| medios("sin la etiqueta LPCM"))?;
+    }
 
     let medidas = Medidas::instalar(&tuberia).ok_or_else(|| medios("sin puntos de medida"))?;
     let (tx, aviso) = watch::channel(None);

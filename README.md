@@ -1,7 +1,7 @@
 ---
 lang: es-CO
 título: Proyectar
-versión: 0.5.1
+versión: 0.5.2
 ---
 
 # Proyectar
@@ -25,6 +25,7 @@ paleta Drácula.
 | 0.4.0 | 2026-10-13 | Andrés García | Modo Juegos de baja latencia (LPCM, refresco intra, búfer de 3 cuadros), envío a ritmo constante, informes RTCP del TV, cronómetro para medir |
 | 0.3.0 | 2026-10-13 | Andrés García | Salida de audio del TV en KDE, latencia del equipo visible, búfer de decodificación por perfil, monitoreo de radio y CPU, tamaño de ventana recordado |
 | 0.5.1 | 2026-10-14 | Andrés García | La búsqueda de pantallas se detiene a los 2 minutos (↻ la reanuda): dejada abierta horas trababa el escaneo Wi-Fi de la tarjeta rtw89 |
+| 0.5.2 | 2026-10-14 | Andrés García | Audio LPCM con el formato de Miracast (tipo 0x83 con su descriptor, flujo 0xBD y cabecera por bloque de 10 ms): con el de DVD que pone mpegtsmux el TV no sonaba |
 
 ## Qué es
 
