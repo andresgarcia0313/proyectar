@@ -1,7 +1,7 @@
 ---
 lang: es-CO
 título: Proyectar
-versión: 0.4.0
+versión: 0.5.0
 ---
 
 # Proyectar
@@ -21,6 +21,7 @@ paleta Drácula.
 | 0.1.0 | 2026-10-12 | Andrés García | Documentación inicial del proyecto |
 | 0.1.1 | 2026-10-12 | Andrés García | README bilingüe para publicar: funciones, requisitos, GPU, receptores, instalación, cortafuegos y modo demo |
 | 0.2.0 | 2026-10-13 | Andrés García | Nombre del equipo en Wi-Fi Direct (`--sistema`), fases de conexión, diagnóstico y registro de eventos |
+| 0.5.0 | 2026-10-13 | Andrés García | Monitor de comportamiento: autodiagnóstico, señales (RTT, audio, descartes, carga), resumen por sesión con veredictos y `proyectar --informe` |
 | 0.4.0 | 2026-10-13 | Andrés García | Modo Juegos de baja latencia (LPCM, refresco intra, búfer de 3 cuadros), envío a ritmo constante, informes RTCP del TV, cronómetro para medir |
 | 0.3.0 | 2026-10-13 | Andrés García | Salida de audio del TV en KDE, latencia del equipo visible, búfer de decodificación por perfil, monitoreo de radio y CPU, tamaño de ventana recordado |
 
@@ -190,6 +191,24 @@ televisor suma su propio búfer, y es la parte que más pesa. El modo **Juegos**
 
 El botón del cronómetro, en la tarjeta, abre un reloj en milisegundos: llévalo a la pantalla que se
 proyecta, toma una foto donde se vean el portátil y el TV y resta los dos tiempos.
+
+### Monitor de comportamiento
+
+Proyectar se evalúa solo mientras se usa. Al arrancar anota un autodiagnóstico del equipo (Wi-Fi
+Direct, codificadores, protocolo de KWin, audio, puertos). Durante la proyección registra el retardo
+del equipo, el tiempo de ida y vuelta por RTCP, la pérdida, los cuadros descartados, los cuadros clave
+que pide el TV, el nivel de audio, la señal Wi-Fi, la CPU y la carga. Al terminar cada sesión deja
+un resumen con un veredicto por prueba (latencia, imagen, audio, Extender, Duplicar, estabilidad,
+enlace, reconexión): bien, aviso, mal o sin datos.
+
+```bash
+proyectar --informe      # las últimas 5 sesiones con sus veredictos
+proyectar --informe 20   # las últimas 20
+```
+
+Lo que el equipo no puede observar (la imagen en la pantalla del TV, el sonido que se oye, los
+ajustes del TV y la latencia de vidrio a vidrio) queda "sin datos"; la latencia completa se obtiene
+con el cronómetro.
 
 ### Si algo falla
 

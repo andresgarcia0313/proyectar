@@ -1,7 +1,7 @@
 ---
 lang: es-CO
 título: Proyectar - Especificación de requisitos
-versión: 1.3.0
+versión: 1.4.0
 ---
 
 # Proyectar - Especificación de requisitos
@@ -13,6 +13,7 @@ versión: 1.3.0
 | 1.0.0 | 2026-10-12 | Andrés García | Versión inicial: visión, funciones de Windows a igualar, requisitos, exclusiones y riesgos |
 | 1.0.1 | 2026-10-12 | Andrés García | Limpieza para publicar: equipos de referencia sin datos del hogar ni nombres de equipos |
 | 1.1.0 | 2026-10-13 | Andrés García | Primera prueba con TV real: RF-14 a RF-17 y hoja de ruta tomada del emisor de Windows |
+| 1.4.0 | 2026-10-13 | Andrés García | RF-27 y RF-28: monitor de comportamiento con veredictos y autodiagnóstico |
 | 1.3.0 | 2026-10-13 | Andrés García | RF-23 a RF-26: técnicas de baja latencia del modo Juegos, envío a ritmo, RTCP y cronómetro |
 | 1.2.0 | 2026-10-13 | Andrés García | RF-18 a RF-22 tras la segunda prueba: captura directa, audio del TV, latencia medida y comparación con macOS y Android |
 
@@ -61,6 +62,8 @@ con Windows 11 23H2 y documentación de Microsoft.
 | RF-24 | Envío a ritmo | Emisor UDP propio con cubo de fichas y DSCP 46 | Sin ráfagas por cuadro; prueba de ritmo medido | Debería |
 | RF-25 | RTCP | Leer los informes del TV en el puerto 5001 y ajustar el bitrate con pérdida sostenida | Pérdida y fluctuación en el registro | Debería |
 | RF-26 | Medir latencia | Cronómetro en milisegundos para fotografiar emisor y TV | La diferencia se puede anotar en el registro | Debería |
+| RF-27 | Monitor de comportamiento | Registrar mientras se usa lo que revelarían las pruebas manuales y emitir `resumen_sesion` con veredictos por prueba; `proyectar --informe` | Cada sesión termina con veredictos; lo no observable queda sin datos con su motivo | Debe |
+| RF-28 | Autodiagnóstico | Comprobar al arrancar los requisitos del equipo y anotarlos | El informe muestra qué falta instalar o configurar | Debería |
 | RF-17 | Datos del receptor | Pedir en M3 los parámetros opcionales que pide Windows (EDID, conector, modo preferido) y anotarlos | Un receptor que no los conoce no falla; los que responde quedan en el registro | Debería |
 
 ## 4. Requisitos no funcionales

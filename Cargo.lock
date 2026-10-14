@@ -16,7 +16,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "app"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "cxx",
  "cxx-qt",
@@ -930,7 +930,7 @@ dependencies = [
 
 [[package]]
 name = "motor"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "ashpd",
  "dirs",
@@ -1724,7 +1724,7 @@ dependencies = [
 
 [[package]]
 name = "wfd"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "thiserror 2.0.21",
  "tokio",
