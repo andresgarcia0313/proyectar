@@ -50,8 +50,12 @@ impl Medios {
         })
     }
 
-    /// Asks the encoder for an IDR frame with SPS/PPS (the sink lost the picture).
-    /// Requests in a row mean packet loss: the bitrate then steps down.
+    /// The CPU encoder (Juegos) is below 80 % of the frame rate on a busy computer.
+    pub fn rezagado(&self, fps: f32) -> bool {
+        self.codificador == Codificador::Refresco && fps < self.modo.fps as f32 * 0.8
+    }
+
+    /// IDR with SPS/PPS now (the sink lost the picture); requests in a row lower the bitrate.
     pub fn pedir_idr(&self) {
         if let Some(cod) = self.pipeline.by_name("cod") {
             cod.send_event(evento_idr());
