@@ -19,7 +19,10 @@ impl Medios {
         let ((fps, kbps), (retardo_ms, retardo_peor_ms, retardo_cod_ms)) =
             (self.medidas.contador.tasa(), self.medidas.retardos());
         let (ancho, alto, gpu) = (self.modo.width, self.modo.height, self.codificador.es_gpu());
-        let crate::rtcp::Informe { perdida_pct, perdidos, jitter_ms } = self.emisor.calidad();
+        let crate::rtcp::Informe { perdida_pct, perdidos, jitter_ms, rtt_ms, .. } = self.emisor.calidad();
+        let ((tasa_descartes, tasa_duplicados), descartes) =
+            (self.medidas.descartes.tasa(), self.medidas.descartes.cola());
+        let (audio_medido_s, audio_senal_s) = self.medidas.nivel.segundos();
         Estadisticas {
             ancho,
             alto,
@@ -32,6 +35,12 @@ impl Medios {
             perdida_pct,
             perdidos,
             jitter_ms,
+            rtt_ms,
+            descartes,
+            tasa_descartes,
+            tasa_duplicados,
+            audio_medido_s,
+            audio_senal_s,
         }
     }
 

@@ -46,6 +46,8 @@ pub struct Reparto<B, F> {
     /// Called once per run of failed sends that reaches `fallos_max`.
     pub fallar: F,
     pub fallos_max: u32,
+    /// Packets and bytes sent and the last RTP timestamp, for our RTCP sender reports.
+    pub cuenta: std::sync::Arc<crate::rtcp_sr::Cuenta>,
 }
 
 /// Sends what arrives on `rx` until it closes or `parar` is set.
@@ -70,7 +72,10 @@ where
             std::thread::sleep(espera);
         }
         match sock.send_to(datos, r.destino) {
-            Ok(_) => fallos = 0,
+            Ok(_) => {
+                fallos = 0;
+                r.cuenta.anotar(datos, Instant::now());
+            }
             Err(e) => {
                 fallos += 1;
                 if fallos == r.fallos_max {

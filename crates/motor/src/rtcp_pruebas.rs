@@ -7,12 +7,16 @@ fn cabecera(cuenta: u8, pt: u8, palabras: u16) -> Vec<u8> {
 }
 
 fn bloque_de(ssrc: u32, fraccion: u8, perdidos: [u8; 3], jitter: u32) -> Vec<u8> {
+    eco(ssrc, fraccion, perdidos, jitter, [0; 8])
+}
+
+fn eco(ssrc: u32, fraccion: u8, perdidos: [u8; 3], jitter: u32, lsr_dlsr: [u8; 8]) -> Vec<u8> {
     let mut v = ssrc.to_be_bytes().to_vec();
     v.push(fraccion);
     v.extend(perdidos);
     v.extend(7000u32.to_be_bytes()); // highest sequence
     v.extend(jitter.to_be_bytes());
-    v.extend([0; 8]); // LSR, DLSR
+    v.extend(lsr_dlsr);
     v
 }
 
@@ -32,7 +36,7 @@ fn rr_compuesto_con_sdes() {
     p.extend(sdes.concat());
     assert_eq!(p.len(), 84);
     let i = leer(&p, SSRC).unwrap();
-    assert_eq!(i, Informe { perdida_pct: 25.0, perdidos: 300, jitter_ms: 5.0 });
+    assert_eq!(i, Informe { perdida_pct: 25.0, perdidos: 300, jitter_ms: 5.0, ..Default::default() });
 }
 
 #[test]
@@ -55,4 +59,13 @@ fn rechaza_lo_que_no_es_rtcp() {
     assert!(leer(&rr, SSRC).is_none(), "versión 1");
     assert!(leer(&[0x80, 33, 0, 1, 0, 0, 0, 0], SSRC).is_none(), "RTP, no RTCP");
     assert!(leer(&cabecera(0, RR, 2).into_iter().chain([0; 4]).collect::<Vec<_>>(), SSRC).is_none());
+}
+
+#[test]
+fn lee_el_eco_de_nuestro_sr() {
+    let mut p = cabecera(1, RR, 8);
+    p.extend(0x1234_5678u32.to_be_bytes());
+    p.extend(eco(SSRC, 0, [0; 3], 0, [0xab, 0xcd, 0x80, 0, 0, 0, 0x80, 0]));
+    let i = leer(&p, SSRC).unwrap();
+    assert_eq!((i.lsr, i.dlsr, i.rtt_ms), (0xabcd_8000, 0x8000, 0.0), "el RTT lo calcula quien recibe");
 }

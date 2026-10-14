@@ -9,6 +9,7 @@ use crate::enlace::nombre_propio;
 use crate::fallo::{Fallo, Resultado};
 use crate::medios::{Codificador, Medios};
 use crate::registro;
+use crate::resumen::Acumulador;
 use crate::transmision;
 pub use crate::transmision::pedido;
 use crate::wifi_direct::{Pantalla, WifiDirect};
@@ -37,6 +38,7 @@ pub struct Contexto<'a> {
     pub parar: &'a mut watch::Receiver<bool>,
     pub avisar: &'a (dyn Fn(Aviso) + Send + Sync),
     pub fase: &'a mut Causa,
+    pub resumen: &'a mut Acumulador,
 }
 
 pub async fn intentar(cx: Contexto<'_>) -> Resultado<Fin> {
@@ -71,24 +73,22 @@ pub async fn intentar(cx: Contexto<'_>) -> Resultado<Fin> {
         let (sesion, acordado) = wfd::Session::negotiate(tcp, &quiero).await?;
         let origen = cx.captura.origen()?;
         let destino = SocketAddr::new(remoto.ip(), acordado.rtp_port);
-        let _salida_tv = crate::salida_audio::SalidaTv::crear(&nombre, opciones.audio);
-        let medios = Medios::iniciar(
-            origen,
-            destino,
-            acordado.video,
-            acordado.audio,
-            perfil,
-            cx.codificador,
-            opciones.audio,
-        )?;
-        let (formato, cod) = (format!("{acordado:?}"), cx.codificador.nombre());
+        let salida_tv = crate::salida_audio::SalidaTv::crear(&nombre, opciones.audio);
+        let (video, audio, cod) = (acordado.video, acordado.audio, cx.codificador);
+        let medios = Medios::iniciar(origen, destino, video, audio, perfil, cod, opciones.audio)?;
+        let (formato, cod) = (format!("{acordado:?}"), cod.nombre());
         registro::anotar(
             "transmitiendo",
             json!({"formato": formato, "codificador": cod, "opciones": opciones, "receptor": format!("{:?}", sesion.sink_info())}),
         );
         *cx.fase = Causa::EnlaceCaido;
         estado(|nombre| Estado::Proyectando { nombre });
-        transmision::transmitir(sesion, medios, &enlace, cx.opciones, cx.parar, cx.avisar).await
+        let via = if cx.captura.es_portal() { "portal" } else { "kwin" };
+        cx.resumen.transmitiendo(&opciones, cod, video.fps, crate::resumen_tramo::codec(audio), via);
+        let fin = transmision::transmitir(sesion, medios, &enlace, cx.opciones, cx.parar, cx.avisar, cx.resumen).await;
+        drop(salida_tv);
+        cx.resumen.audio_restaurada = opciones.audio.then(crate::resumen_tramo::audio_fuera_del_tv).flatten();
+        fin
     }
     .await;
     enlace.cerrar().await;

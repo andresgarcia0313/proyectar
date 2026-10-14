@@ -1,7 +1,9 @@
 //! Everything measured on a running pipeline: rate, and delay up to the encoder and to the network.
 
+use crate::medios_descartes::Descartes;
 use crate::medios_estado::Contador;
 use crate::medios_latencia::Retardo;
+use crate::medios_nivel::Nivel;
 use gstreamer as gst;
 use gstreamer::prelude::*;
 use std::sync::Arc;
@@ -11,6 +13,9 @@ pub struct Medidas {
     pub contador: Arc<Contador>,
     codificado: Option<Arc<Retardo>>,
     enviado: Option<Arc<Retardo>>,
+    pub descartes: Descartes,
+    /// Fed by the bus handler with `level` messages.
+    pub nivel: Arc<Nivel>,
 }
 
 impl Medidas {
@@ -27,7 +32,9 @@ impl Medidas {
             },
         );
         let codificado = Retardo::vigilar(tuberia, "analizador", "src");
-        Some(Self { contador, codificado, enviado: Retardo::vigilar(tuberia, "salida", "sink") })
+        let (enviado, descartes) =
+            (Retardo::vigilar(tuberia, "salida", "sink"), Descartes::instalar(tuberia));
+        Some(Self { contador, codificado, enviado, descartes, nivel: Arc::default() })
     }
 
     /// (average to the network, worst to the network, average to the encoder output) in ms.

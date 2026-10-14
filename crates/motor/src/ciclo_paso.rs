@@ -6,6 +6,8 @@ use crate::diagnostico::Causa;
 use crate::fallo::Resultado;
 use crate::medios::Codificador;
 use crate::modo::Fuente;
+use crate::resumen::Acumulador;
+use crate::resumen_salida::{comprobar, soltar};
 use crate::sesion::{self, Contexto, Fin};
 
 impl Ciclo {
@@ -14,6 +16,7 @@ impl Ciclo {
         captura: &mut Option<Captura>,
         codificador: Codificador,
         fase: &mut Causa,
+        resumen: &mut Acumulador,
     ) -> Resultado<Fin> {
         let (fuente, perfil) = {
             let opciones = self.opciones.borrow();
@@ -23,7 +26,7 @@ impl Ciclo {
         // A virtual screen keeps the size it was made with: a new profile needs a new one.
         let vieja = |c: &Captura| c.fuente != fuente || (fuente == Fuente::Extender && c.pedido != tamano);
         if captura.as_ref().is_some_and(vieja) {
-            Captura::soltar(captura.take()).await;
+            resumen.quitada(soltar(captura.take(), &self.pantalla.nombre).await);
         }
         if captura.is_none() {
             let token =
@@ -34,6 +37,7 @@ impl Ciclo {
                 recientes.poner_token(fuente, nueva.token.clone());
                 recientes.guardar();
             }
+            resumen.salida_virtual = comprobar(&nueva, &self.pantalla.nombre, tamano).await;
             *captura = Some(nueva);
         }
         let Some(captura) = captura.as_ref() else { return Ok(Fin::Terminada) };
@@ -46,6 +50,7 @@ impl Ciclo {
             parar: &mut self.parar,
             avisar: &*self.avisar,
             fase,
+            resumen,
         })
         .await
     }

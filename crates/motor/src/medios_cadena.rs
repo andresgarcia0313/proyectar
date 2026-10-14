@@ -11,8 +11,10 @@ pub const PID_PMT: u32 = 0x1000;
 pub const PID_VIDEO: u32 = 0x1011;
 pub const PID_AUDIO: u32 = 0x1100;
 
+/// A queue of `max` frames; the leaky one (only before the encoder) is named `fuga` so its
+/// drops can be counted (`medios_descartes`).
 pub(crate) fn cola(max: u32, fuga: bool) -> String {
-    let fuga = if fuga { " leaky=downstream" } else { "" };
+    let fuga = if fuga { " leaky=downstream name=fuga" } else { "" };
     format!("queue max-size-buffers={max} max-size-time=0 max-size-bytes=0{fuga}")
 }
 

@@ -5,6 +5,7 @@ use crate::enlace::Enlace;
 use crate::fallo::{Fallo, Resultado};
 use crate::medios::Medios;
 use crate::registro;
+use crate::resumen::Acumulador;
 use crate::sesion::Fin;
 use crate::{Aviso, Opciones};
 use serde_json::json;
@@ -19,6 +20,7 @@ pub async fn transmitir(
     opciones: &mut watch::Receiver<Opciones>,
     parar: &mut watch::Receiver<bool>,
     avisar: &(dyn Fn(Aviso) + Send + Sync),
+    resumen: &mut Acumulador,
 ) -> Resultado<Fin> {
     let mut reloj = tokio::time::interval(Duration::from_secs(1));
     let (mut segundos, mut lentos, mut cpu) = (0u64, 0u32, crate::monitor::Cpu::nuevo());
@@ -28,7 +30,10 @@ pub async fn transmitir(
                 let evento = evento?;
                 registro::anotar("tv_evento", json!({"evento": format!("{evento:?}")}));
                 match evento {
-                    wfd::Event::IdrRequest => medios.pedir_idr(),
+                    wfd::Event::IdrRequest => {
+                        resumen.idr();
+                        medios.pedir_idr()
+                    }
                     wfd::Event::Teardown => break Ok(Fin::Terminada),
                     wfd::Event::Play | wfd::Event::Pause => {}
                 }
@@ -43,6 +48,7 @@ pub async fn transmitir(
             _ = reloj.tick() => {
                 let e = medios.estadisticas();
                 segundos += 1;
+                resumen.segundo(&e);
                 // Five slow seconds in a row: start over with the GPU encoder (next in the chain).
                 lentos = if medios.rezagado(e.fps) { lentos + 1 } else { 0 };
                 if lentos >= 5 {
@@ -50,8 +56,9 @@ pub async fn transmitir(
                     break Err(Fallo::Codificador { codificador: "x264enc", detalle });
                 }
                 if segundos % 10 == 0 {
-                    let (radio, cpu) = (crate::monitor::radio().await, cpu.medir());
-                    registro::anotar("estadisticas", json!({"s": segundos, "video": e, "cpu_pct": cpu, "radio": radio}));
+                    let (radio, cpu, carga) = (crate::monitor::radio().await, cpu.medir(), crate::monitor_carga::medir());
+                    registro::anotar("estadisticas", json!({"s": segundos, "video": e, "cpu_pct": cpu, "carga": carga, "radio": radio}));
+                    resumen.muestra(radio.as_ref(), cpu, carga);
                 }
                 avisar(Aviso::Estadisticas(e));
             }

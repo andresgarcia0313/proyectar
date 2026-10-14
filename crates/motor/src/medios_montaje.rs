@@ -1,15 +1,14 @@
-//! Builds the pipeline from its description and wires the measuring probe, the error bus and
-//! the paced sender that takes the packets from the appsink.
+//! Builds the pipeline from its description and wires the measuring probes, the bus (`medios_bus`)
+//! and the paced sender that takes the packets from the appsink.
 
 use crate::envio::Emisor;
 use crate::fallo::{Fallo, Resultado};
 use crate::medios_cadena::{descripcion, PID_AUDIO, PID_PMT, PID_VIDEO};
-use crate::medios_estado::{clasificar, Aviso};
+use crate::medios_estado::Aviso;
 use crate::medios_medidas::Medidas;
 use crate::medios_ritmo::Ritmo;
 use crate::medios_tipos::{Codificador, Origen};
 use crate::modo::Perfil;
-use crate::prioridad;
 use gstreamer as gst;
 use gstreamer::prelude::*;
 use std::net::SocketAddr;
@@ -71,27 +70,7 @@ pub fn montar(
 
     let medidas = Medidas::instalar(&tuberia).ok_or_else(|| medios("sin puntos de medida"))?;
     let (tx, aviso) = watch::channel(None);
-    let runtime = tokio::runtime::Handle::try_current().ok();
-    tuberia.bus().ok_or_else(|| medios("sin bus"))?.set_sync_handler(move |_, msg| {
-        match msg.view() {
-            gst::MessageView::Error(e) => {
-                tx.send_if_modified(|v| v.is_none().then(|| *v = Some(clasificar(e))).is_some());
-            }
-            gst::MessageView::Warning(w) => {
-                let origen = w.src().map(|s| s.path_string().to_string());
-                crate::registro::anotar(
-                    "gst_aviso",
-                    serde_json::json!({"origen": origen, "texto": w.error().to_string()}),
-                );
-            }
-            // Posted from inside each new streaming thread: the moment to raise it.
-            gst::MessageView::StreamStatus(s) if s.get().0 == gst::StreamStatusType::Enter => {
-                prioridad::subir_este_hilo(&runtime);
-            }
-            _ => {}
-        }
-        gst::BusSyncReply::Drop
-    });
+    crate::medios_bus::vigilar(&tuberia.bus().ok_or_else(|| medios("sin bus"))?, tx, medidas.nivel.clone());
     let ritmo = Arc::new(Ritmo::nuevo(perfil.kbps));
     let emisor = Emisor::instalar(&tuberia, destino, ritmo.clone(), cod)?;
     Ok(Montaje { tuberia, fd, medidas, aviso, ritmo, emisor })

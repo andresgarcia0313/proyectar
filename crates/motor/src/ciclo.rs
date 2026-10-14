@@ -8,6 +8,8 @@ use crate::fallo::Accion;
 use crate::medios::Codificador;
 use crate::recientes::Recientes;
 use crate::registro;
+use crate::resumen::Acumulador;
+use crate::resumen_salida::soltar;
 use crate::sesion::{self, Fin};
 use crate::wifi_direct::{Pantalla, WifiDirect};
 use crate::{Avisar, Aviso, Estado, Opciones};
@@ -34,12 +36,15 @@ impl Ciclo {
     pub async fn correr(mut self) {
         let (mut codificador, mut captura, mut intento) =
             (Codificador::para(self.opciones.borrow().latencia.perfil()), None::<Captura>, 0);
+        let (mut resumen, mut motivo) = (Acumulador::nuevo(&self.pantalla.nombre), "fin");
         loop {
             let (inicio, mut fase) = (Instant::now(), Causa::Captura);
-            let paso = self.paso(&mut captura, codificador, &mut fase).await;
+            let paso = self.paso(&mut captura, codificador, &mut fase, &mut resumen).await;
             let fallo = match paso {
                 Ok(Fin::Terminada) => break,
                 Ok(Fin::Repetir) => {
+                    resumen.cerrar("opciones");
+                    resumen.reiniciar();
                     codificador = Codificador::para(self.opciones.borrow().latencia.perfil());
                     continue;
                 }
@@ -47,6 +52,7 @@ impl Ciclo {
             };
             intento = if inicio.elapsed() > SANA { 1 } else { intento + 1 };
             let accion = fallo.recovery();
+            resumen.caida();
             registro::anotar(
                 "fallo",
                 json!({"fase": fase, "detalle": fallo.to_string(), "accion": format!("{accion:?}"),
@@ -55,7 +61,7 @@ impl Ciclo {
             let rendirse = match accion {
                 Accion::OtroCodificador => codificador.siguiente().map(|otro| codificador = otro).is_none(),
                 Accion::NuevaCaptura => {
-                    Captura::soltar(captura.take()).await;
+                    resumen.quitada(soltar(captura.take(), &self.pantalla.nombre).await);
                     false
                 }
                 Accion::Detener => true,
@@ -64,6 +70,7 @@ impl Ciclo {
             if rendirse || intento > MAX_INTENTOS {
                 (self.avisar)(Aviso::Diagnostico(Diagnostico::de(&fallo, fase)));
                 (self.avisar)(Aviso::Error(format!("La proyección se detuvo: {fallo}")));
+                motivo = "fallo";
                 break;
             }
             (self.avisar)(Aviso::Estado(Estado::Reconectando {
@@ -85,7 +92,8 @@ impl Ciclo {
             }
             self.wd.parar().await;
         }
-        Captura::soltar(captura).await;
+        resumen.quitada(soltar(captura, &self.pantalla.nombre).await);
+        resumen.cerrar(motivo);
         (self.avisar)(Aviso::Estado(Estado::Inactivo));
     }
 }

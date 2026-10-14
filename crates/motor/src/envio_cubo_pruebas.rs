@@ -25,7 +25,13 @@ fn en_reposo_solo_junta_una_rafaga_corta() {
 
 /// Sends `n` packets queued at once and returns the spread between first and last arrival.
 fn medir(n: usize, atraso_max: Duration) -> Duration {
-    let receptor = UdpSocket::bind("127.0.0.1:0").unwrap();
+    // A burst of 150 packets overflows the default 208 KiB buffer when the machine is busy and
+    // the test then waited forever: room for all of them, and a timeout that fails instead.
+    let receptor = socket2::Socket::new(socket2::Domain::IPV4, socket2::Type::DGRAM, None).unwrap();
+    receptor.set_recv_buffer_size(1 << 20).unwrap();
+    receptor.bind(&std::net::SocketAddr::from(([127, 0, 0, 1], 0)).into()).unwrap();
+    let receptor: UdpSocket = receptor.into();
+    receptor.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
     let destino = receptor.local_addr().unwrap();
     let (tx, rx) = mpsc::channel();
     for _ in 0..n {
@@ -33,7 +39,14 @@ fn medir(n: usize, atraso_max: Duration) -> Duration {
     }
     drop(tx);
     let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
-    let r = Reparto { destino, bps: || 10_000_000.0, atraso_max, fallar: |_| {}, fallos_max: 1 };
+    let r = Reparto {
+        destino,
+        bps: || 10_000_000.0,
+        atraso_max,
+        fallar: |_| {},
+        fallos_max: 1,
+        cuenta: Arc::default(),
+    };
     let hilo = std::thread::spawn(move || repartir(rx, sock, r, &AtomicBool::new(false)));
     let mut buf = [0u8; 1500];
     receptor.recv(&mut buf).unwrap();
@@ -77,6 +90,7 @@ fn los_envios_fallidos_seguidos_se_avisan_una_vez() {
             a.fetch_add(1, Relaxed);
         },
         fallos_max: 3,
+        cuenta: Arc::default(),
     };
     repartir(rx, UdpSocket::bind("127.0.0.1:0").unwrap(), r, &AtomicBool::new(false));
     assert_eq!(avisos.load(Relaxed), 1);

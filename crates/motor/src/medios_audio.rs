@@ -1,8 +1,10 @@
 //! Audio branch: the TV's sound (or silence) as AAC-LC or LPCM into the muxer. The sound is
 //! the monitor of the TV's own output (`salida_audio`), read in small quanta and stamped with
-//! the pipeline clock like the video, so voice and picture stay together.
+//! the pipeline clock like the video, so voice and picture stay together. `level` measures it
+//! on the way (`medios_nivel`); the conversion after it gives each encoder its own format.
 
 use crate::medios_cadena::{cola, PID_AUDIO};
+use crate::medios_nivel::INTERVALO_NS;
 use crate::salida_audio_cmd::SUMIDERO;
 use wfd::AudioCodec;
 
@@ -28,6 +30,7 @@ pub fn audio(codec: Option<AudioCodec>, sonido_tv: bool) -> String {
     };
     format!(
         "{origen} ! audioconvert ! audioresample ! audio/x-raw,rate=48000,channels=2 ! \
+         level name=nivel interval={INTERVALO_NS} post-messages=true ! audioconvert ! \
          {cierre} ! {} ! mux.sink_{PID_AUDIO}",
         cola(8, false)
     )
@@ -43,6 +46,13 @@ mod tests {
         let rama = audio(None, true);
         assert!(rama.contains("target-object=proyectar_tv do-timestamp=true provide-clock=false"));
         assert!(rama.contains("stream.capture.sink=true,node.latency=256/48000"));
+    }
+
+    #[test]
+    fn mide_el_nivel_antes_de_codificar() {
+        let rama = audio(Some(AudioCodec::Aac), false);
+        assert!(rama
+            .contains("level name=nivel interval=1000000000 post-messages=true ! audioconvert ! avenc_aac"));
     }
 
     #[test]

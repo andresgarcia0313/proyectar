@@ -17,4 +17,14 @@ pub struct Estadisticas {
     pub perdida_pct: f32,
     pub perdidos: i32,
     pub jitter_ms: f32,
+    /// Round trip of the link from the echo of our RTCP sender reports, in ms (0 until one comes back).
+    pub rtt_ms: f32,
+    /// Since the pipeline started: frames the leaky queue dropped because the encoder was busy,
+    /// and frames videorate dropped or duplicated to hold the frame rate (expected, context only).
+    pub descartes: u64,
+    pub tasa_descartes: u64,
+    pub tasa_duplicados: u64,
+    /// Since the pipeline started: seconds of audio measured and seconds above silence.
+    pub audio_medido_s: u32,
+    pub audio_senal_s: u32,
 }

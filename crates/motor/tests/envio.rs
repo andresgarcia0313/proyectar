@@ -66,6 +66,16 @@ async fn un_envio_imposible_es_fallo_de_medios() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn mide_el_silencio_y_los_cuadros_descartados() {
+    let tv = UdpSocket::bind("127.0.0.1:0").unwrap();
+    let medios = iniciar(tv.local_addr().unwrap());
+    tokio::time::sleep(Duration::from_millis(2600)).await;
+    let e = medios.estadisticas();
+    assert!(e.audio_medido_s >= 2 && e.audio_senal_s == 0, "el silencio se mide y no cuenta: {e:?}");
+    assert!(e.descartes < 15, "la prueba sostiene 30 fps sin botar cuadros: {e:?}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn al_soltar_medios_los_puertos_quedan_libres() {
     let tv = UdpSocket::bind("127.0.0.1:0").unwrap();
     drop(iniciar(tv.local_addr().unwrap()));

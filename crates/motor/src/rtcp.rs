@@ -19,6 +19,11 @@ pub struct Informe {
     pub perdidos: i32,
     /// Interarrival jitter, in ms.
     pub jitter_ms: f32,
+    /// Echo of our last sender report (middle NTP bits) and how long the TV held it (1/65536 s).
+    pub lsr: u32,
+    pub dlsr: u32,
+    /// Round trip of the link from that echo, in ms; 0 until the TV answered one of our reports.
+    pub rtt_ms: f32,
 }
 
 /// The report about `ssrc` in a (possibly compound) packet; the first block when none names it.
@@ -54,6 +59,9 @@ fn bloque(b: &[u8]) -> Informe {
         // 24-bit signed: shift into the top of an i32 and back to keep the sign.
         perdidos: i32::from_be_bytes([b[5], b[6], b[7], 0]) >> 8,
         jitter_ms: u32::from_be_bytes([b[12], b[13], b[14], b[15]]) as f32 / TICS_POR_MS,
+        lsr: u32::from_be_bytes([b[16], b[17], b[18], b[19]]),
+        dlsr: u32::from_be_bytes([b[20], b[21], b[22], b[23]]),
+        rtt_ms: 0.0,
     }
 }
 
