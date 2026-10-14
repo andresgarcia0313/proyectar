@@ -9,6 +9,10 @@ mod ciclo_paso;
 mod control;
 pub mod diagnostico;
 pub mod enlace;
+pub mod envio;
+mod envio_cubo;
+mod envio_red;
+mod envio_rtcp;
 pub mod fallo;
 pub mod medios;
 mod medios_audio;
@@ -27,6 +31,7 @@ mod prioridad;
 mod proyeccion;
 pub mod recientes;
 pub mod registro;
+mod rtcp;
 pub mod salida_audio;
 mod salida_audio_cmd;
 mod sesion;
@@ -84,6 +89,10 @@ pub struct Estadisticas {
     pub retardo_ms: f32,
     pub retardo_peor_ms: f32,
     pub retardo_cod_ms: f32, // capture to encoded frame
+    /// From the TV's RTCP reports: share lost lately (%), packets lost in total, jitter (ms).
+    pub perdida_pct: f32,
+    pub perdidos: i32,
+    pub jitter_ms: f32,
 }
 
 /// Everything the engine reports, from its own threads: queue it to the GUI thread.

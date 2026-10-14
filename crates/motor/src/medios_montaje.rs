@@ -1,9 +1,12 @@
-//! Builds the pipeline from its description and wires the measuring probe and the error bus.
+//! Builds the pipeline from its description and wires the measuring probe, the error bus and
+//! the paced sender that takes the packets from the appsink.
 
+use crate::envio::Emisor;
 use crate::fallo::{Fallo, Resultado};
 use crate::medios_cadena::{descripcion, PID_AUDIO, PID_PMT, PID_VIDEO};
 use crate::medios_estado::{clasificar, Aviso};
 use crate::medios_medidas::Medidas;
+use crate::medios_ritmo::Ritmo;
 use crate::medios_tipos::{Codificador, Origen};
 use crate::modo::Perfil;
 use crate::prioridad;
@@ -11,6 +14,7 @@ use gstreamer as gst;
 use gstreamer::prelude::*;
 use std::net::SocketAddr;
 use std::os::fd::{AsRawFd, OwnedFd};
+use std::sync::Arc;
 use tokio::sync::watch;
 use wfd::{AudioCodec, VideoMode};
 
@@ -19,6 +23,8 @@ pub struct Montaje {
     pub fd: Option<OwnedFd>,
     pub medidas: Medidas,
     pub aviso: watch::Receiver<Aviso>,
+    pub ritmo: Arc<Ritmo>,
+    pub emisor: Emisor,
 }
 
 fn medios(e: impl std::fmt::Display) -> Fallo {
@@ -36,7 +42,7 @@ pub fn montar(
     sonido_tv: bool,
 ) -> Resultado<Montaje> {
     gst::init().map_err(medios)?;
-    let texto = descripcion(&origen, destino, modo, audio, perfil, cod, sonido_tv);
+    let texto = descripcion(&origen, modo, audio, perfil, cod, sonido_tv);
     let tuberia = gst::parse::launch(&texto)
         .map_err(|e| match e.to_string() {
             d if d.contains(cod.nombre()) || d.contains("link pre to cod") || d.contains("vapostproc") => {
@@ -86,5 +92,7 @@ pub fn montar(
         }
         gst::BusSyncReply::Drop
     });
-    Ok(Montaje { tuberia, fd, medidas, aviso })
+    let ritmo = Arc::new(Ritmo::nuevo(perfil.kbps));
+    let emisor = Emisor::instalar(&tuberia, destino, ritmo.clone(), cod)?;
+    Ok(Montaje { tuberia, fd, medidas, aviso, ritmo, emisor })
 }
