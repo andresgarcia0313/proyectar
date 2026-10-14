@@ -1,7 +1,7 @@
 ---
 lang: es-CO
 título: Proyectar
-versión: 0.5.0
+versión: 0.5.1
 ---
 
 # Proyectar
@@ -24,6 +24,7 @@ paleta Drácula.
 | 0.5.0 | 2026-10-13 | Andrés García | Monitor de comportamiento: autodiagnóstico, señales (RTT, audio, descartes, carga), resumen por sesión con veredictos y `proyectar --informe` |
 | 0.4.0 | 2026-10-13 | Andrés García | Modo Juegos de baja latencia (LPCM, refresco intra, búfer de 3 cuadros), envío a ritmo constante, informes RTCP del TV, cronómetro para medir |
 | 0.3.0 | 2026-10-13 | Andrés García | Salida de audio del TV en KDE, latencia del equipo visible, búfer de decodificación por perfil, monitoreo de radio y CPU, tamaño de ventana recordado |
+| 0.5.1 | 2026-10-14 | Andrés García | La búsqueda de pantallas se detiene a los 2 minutos (↻ la reanuda): dejada abierta horas trababa el escaneo Wi-Fi de la tarjeta rtw89 |
 
 ## Qué es
 

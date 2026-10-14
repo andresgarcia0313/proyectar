@@ -1,5 +1,5 @@
-//! Discovery: keeps Wi-Fi Direct looking and reports the displays in sight, only when
-//! the list changes, so the interface never redraws for nothing.
+//! Discovery: keeps Wi-Fi Direct looking for a while and reports the displays in sight, only
+//! when the list changes, so the interface never redraws for nothing.
 
 use crate::fallo::{Fallo, Resultado};
 use crate::wifi_direct::{Pantalla, WifiDirect};
@@ -9,12 +9,15 @@ use std::time::Duration;
 
 /// Discovery windows last 30 s; ask again a little before each one closes.
 const RENOVAR_CADA: u32 = 25;
+/// Then it stops, like Windows and Android do: a search left running for hours shares the radio
+/// with the network scans, and on the rtw89 card it once left them stuck all night (no Wi-Fi).
+const BUSCAR_DURANTE: u32 = 120;
 
 pub async fn buscar(wd: Arc<WifiDirect>, avisar: Avisar) {
     avisar(Aviso::Estado(Estado::Buscando));
     let mut ultima: Option<Vec<Pantalla>> = None;
     let mut reloj = tokio::time::interval(Duration::from_secs(1));
-    for vuelta in 0u32.. {
+    for vuelta in 0..BUSCAR_DURANTE {
         reloj.tick().await;
         if vuelta % RENOVAR_CADA == 0 {
             if let Err(fallo) = wd.buscar().await {
@@ -30,6 +33,8 @@ pub async fn buscar(wd: Arc<WifiDirect>, avisar: Avisar) {
             }
         }
     }
+    wd.parar().await;
+    avisar(Aviso::Estado(Estado::Inactivo));
 }
 
 /// The display with this MAC, looking for it for a while if it is not in sight yet

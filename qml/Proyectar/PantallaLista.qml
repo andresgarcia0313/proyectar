@@ -64,6 +64,7 @@ Rectangle {
             color: Theme.textMuted
             font.pointSize: Theme.label
             text: "Enciende el televisor y activa la duplicación de pantalla (Screen Mirroring)."
+                  + (lista.buscando ? "" : " Luego toca ↻ para buscar de nuevo.")
         }
     }
 }
