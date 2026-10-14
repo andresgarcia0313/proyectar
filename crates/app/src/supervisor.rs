@@ -16,14 +16,20 @@ const RESTART_WINDOW: Duration = Duration::from_secs(600);
 /// In the parent, supervises and returns the exit code; in the child (or with
 /// `PROYECTAR_NO_SUPERVISOR`), returns `None` so `main` runs the app itself.
 pub fn run() -> Option<i32> {
-    if std::env::var_os(CHILD).is_some() || std::env::var_os("PROYECTAR_NO_SUPERVISOR").is_some() {
+    if std::env::var_os(CHILD).is_some() {
+        follow_parent();
+        return None;
+    }
+    if std::env::var_os("PROYECTAR_NO_SUPERVISOR").is_some() {
         return None;
     }
     let exe = std::env::current_exe().ok()?;
     let mut restarts: Vec<Instant> = Vec::new();
     loop {
         let mut cmd = Command::new(&exe);
-        cmd.args(std::env::args_os().skip(1)).env(CHILD, "1").stdout(Stdio::piped());
+        cmd.args(std::env::args_os().skip(1))
+            .env(CHILD, std::process::id().to_string())
+            .stdout(Stdio::piped());
         if !restarts.is_empty() {
             cmd.env("PROYECTAR_RESTARTED", "1");
         }
@@ -68,6 +74,20 @@ pub fn run() -> Option<i32> {
             return Some(1);
         }
         restarts.push(Instant::now());
+    }
+}
+
+/// In the child: the window goes when its supervisor goes (killed by the user or by an update), so
+/// an orphan never keeps running old code, nor searching for displays with nobody to close it.
+fn follow_parent() {
+    #[cfg(unix)]
+    if let Some(parent) = std::env::var(CHILD).ok().and_then(|p| p.parse::<u32>().ok()) {
+        std::thread::spawn(move || loop {
+            if std::os::unix::process::parent_id() != parent {
+                std::process::exit(0);
+            }
+            std::thread::sleep(Duration::from_secs(2));
+        });
     }
 }
 
