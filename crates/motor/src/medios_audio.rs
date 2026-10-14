@@ -20,8 +20,8 @@ pub fn audio(codec: Option<AudioCodec>, sonido_tv: bool) -> String {
     };
     let cierre = match codec {
         Some(AudioCodec::Lpcm) => {
-            "audio/x-raw,format=S16BE ! capssetter replace=true caps=audio/x-lpcm,width=16,\
-             rate=48000,channels=2,dynamic_range=0,emphasis=false,mute=false"
+            "capsfilter caps=audio/x-raw,format=S16BE ! capssetter join=false replace=true caps=\"audio/x-lpcm,width=16,\
+             rate=48000,channels=2,dynamic_range=0,emphasis=false,mute=false\""
         }
         // With no negotiated codec silence still goes as AAC: video-only drops Samsung sessions.
         _ => "avenc_aac bitrate=128000 ! aacparse ! audio/mpeg,mpegversion=4,stream-format=adts",
