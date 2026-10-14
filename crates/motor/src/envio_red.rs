@@ -15,20 +15,30 @@ const BUFER_ENVIO: usize = 1 << 20;
 
 pub type Paquete = (Instant, gst::MappedBuffer<gst::buffer::Readable>);
 
-/// A UDP socket marked EF on `puerto`; on any free port when that one is taken.
-pub fn socket(puerto: u16) -> std::io::Result<UdpSocket> {
+/// A UDP socket marked EF on `puerto` of the address that reaches `destino` (the Wi-Fi Direct
+/// link), never on every interface; on any free port when that one is taken.
+pub fn socket(puerto: u16, destino: SocketAddr) -> std::io::Result<UdpSocket> {
+    let ip = ip_hacia(destino)?;
     let s = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
     s.set_tos_v4(TOS_EF)?;
     s.set_send_buffer_size(BUFER_ENVIO)?;
-    if let Err(e) = s.bind(&SocketAddr::from(([0, 0, 0, 0], puerto)).into()) {
+    if let Err(e) = s.bind(&SocketAddr::new(ip, puerto).into()) {
         // Another projection still holds it: keep streaming, the reports just will not arrive.
         registro::anotar(
             "envio_puerto_ocupado",
             serde_json::json!({"puerto": puerto, "error": e.to_string()}),
         );
-        s.bind(&SocketAddr::from(([0, 0, 0, 0], 0)).into())?;
+        s.bind(&SocketAddr::new(ip, 0).into())?;
     }
     Ok(s.into())
+}
+
+/// The local address the kernel would send from: connecting an unbound UDP socket picks it
+/// without sending anything and without listening on every interface.
+fn ip_hacia(destino: SocketAddr) -> std::io::Result<std::net::IpAddr> {
+    let sonda = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
+    sonda.connect(&destino.into())?;
+    sonda.local_addr()?.as_socket().map(|a| a.ip()).ok_or_else(|| std::io::Error::other("sin IP local"))
 }
 
 /// Queues every packet the appsink receives, stamped with the moment it arrived.

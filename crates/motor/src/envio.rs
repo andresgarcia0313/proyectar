@@ -47,7 +47,8 @@ impl Emisor {
         cod: Codificador,
     ) -> Resultado<Self> {
         let salida = tuberia.by_name("salida").ok_or_else(|| medios("falta salida"))?;
-        let (rtp, rtcp) = (socket(PUERTO_RTP).map_err(medios)?, socket(PUERTO_RTCP).map_err(medios)?);
+        let (rtp, rtcp) =
+            (socket(PUERTO_RTP, destino).map_err(medios)?, socket(PUERTO_RTCP, destino).map_err(medios)?);
         let puerto_rtcp = rtcp.local_addr().map_err(medios)?.port();
         let (rx, cuenta) = (enganchar(&salida), Arc::new(Cuenta::default()));
         let (parar, calidad) = (Arc::new(AtomicBool::new(false)), Arc::new(Calidad::default()));

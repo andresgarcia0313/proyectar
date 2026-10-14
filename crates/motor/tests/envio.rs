@@ -59,9 +59,22 @@ async fn el_informe_rtcp_llega_a_las_estadisticas() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn un_envio_imposible_es_fallo_de_medios() {
-    // An IPv6 target from the IPv4 socket: every send fails, as with a link that is gone.
-    let medios = iniciar("[::1]:9".parse().unwrap());
-    let fallo = tokio::time::timeout(Duration::from_secs(5), medios.fallo()).await.expect("sin fallo");
+    // An IPv6 target from the IPv4 socket, as with a link that is gone: it fails when the socket
+    // is tied to the link's address, or at the first send.
+    let perfil = Latencia::Trabajo.perfil();
+    let destino = "[::1]:9".parse().unwrap();
+    let fallo = match Medios::iniciar(
+        Origen::Prueba,
+        destino,
+        modo(1280, 720, 30, 1),
+        None,
+        perfil,
+        Codificador::X264,
+        false,
+    ) {
+        Err(fallo) => fallo,
+        Ok(medios) => tokio::time::timeout(Duration::from_secs(5), medios.fallo()).await.expect("sin fallo"),
+    };
     assert!(matches!(&fallo, Fallo::Medios(d) if d.contains("envío UDP")), "{fallo:?}");
 }
 
@@ -79,6 +92,6 @@ async fn mide_el_silencio_y_los_cuadros_descartados() {
 async fn al_soltar_medios_los_puertos_quedan_libres() {
     let tv = UdpSocket::bind("127.0.0.1:0").unwrap();
     drop(iniciar(tv.local_addr().unwrap()));
-    UdpSocket::bind(("0.0.0.0", PUERTO_RTP)).expect("5000 sigue tomado");
-    UdpSocket::bind(("0.0.0.0", PUERTO_RTCP)).expect("5001 sigue tomado");
+    UdpSocket::bind(("127.0.0.1", PUERTO_RTP)).expect("5000 sigue tomado");
+    UdpSocket::bind(("127.0.0.1", PUERTO_RTCP)).expect("5001 sigue tomado");
 }
