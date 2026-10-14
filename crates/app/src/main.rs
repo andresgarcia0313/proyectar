@@ -6,6 +6,7 @@ mod ajustes;
 mod avisos;
 mod demo;
 mod inicio;
+mod latencia;
 mod proyeccion_diagnostico;
 mod proyeccion_logica;
 mod proyeccion_object;

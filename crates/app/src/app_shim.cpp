@@ -2,6 +2,7 @@
 // the QML engine and the test hooks (auto quit and screenshot).
 #include <QtCore/QTimer>
 #include <QtCore/QUrl>
+#include <QtGui/QGuiApplication>
 #include <QtGui/QIcon>
 #include <QtQml/QQmlApplicationEngine>
 #include <QtQuick/QQuickWindow>
@@ -12,15 +13,29 @@ namespace {
 int app_argc = 0;
 
 // PROYECTAR_CAPTURA=<file.png>: save the first window after PROYECTAR_CAPTURA_MS (1500).
+// PROYECTAR_CAPTURA_VENTANA=<objectName>: show that secondary window and save it instead.
+QQuickWindow *window_to_grab(QQmlApplicationEngine &engine) {
+    const QString name = qEnvironmentVariable("PROYECTAR_CAPTURA_VENTANA");
+    if (name.isEmpty()) {
+        return engine.rootObjects().isEmpty()
+                   ? nullptr : qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+    }
+    for (QWindow *window : QGuiApplication::topLevelWindows()) {
+        if (window->objectName() == name) return qobject_cast<QQuickWindow *>(window);
+    }
+    return nullptr;
+}
+
 void schedule_screenshot(QQmlApplicationEngine &engine) {
     const QString file = qEnvironmentVariable("PROYECTAR_CAPTURA");
     if (file.isEmpty()) return;
     const int delay = qEnvironmentVariableIsSet("PROYECTAR_CAPTURA_MS")
                           ? qEnvironmentVariableIntValue("PROYECTAR_CAPTURA_MS") : 1500;
+    QTimer::singleShot(delay / 2, qApp, [&engine] {
+        if (auto *window = window_to_grab(engine)) window->show();
+    });
     QTimer::singleShot(delay, qApp, [&engine, file] {
-        auto *window = engine.rootObjects().isEmpty()
-                           ? nullptr : qobject_cast<QQuickWindow *>(engine.rootObjects().first());
-        if (window) window->grabWindow().save(file);
+        if (auto *window = window_to_grab(engine)) window->grabWindow().save(file);
     });
 }
 }  // namespace

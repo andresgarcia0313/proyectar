@@ -9,6 +9,8 @@ Segmented 1.0 Segmented.qml
 SenalBars 1.0 SenalBars.qml
 PantallaRow 1.0 PantallaRow.qml
 PantallaLista 1.0 PantallaLista.qml
+RelojLatencia 1.0 RelojLatencia.qml
+Cronometro 1.0 Cronometro.qml
 TarjetaProyeccion 1.0 TarjetaProyeccion.qml
 Estadisticas 1.0 Estadisticas.qml
 Opciones 1.0 Opciones.qml
