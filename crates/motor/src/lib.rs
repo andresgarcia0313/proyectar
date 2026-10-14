@@ -2,6 +2,9 @@
 //! [`Motor`] (commands) and [`Aviso`] (what happened), so it never blocks.
 
 mod activa;
+pub mod autodiagnostico;
+mod autodiagnostico_sistema;
+mod autodiagnostico_wpa;
 mod busqueda;
 pub mod captura;
 mod ciclo;
@@ -15,6 +18,10 @@ mod envio_red;
 mod envio_rtcp;
 mod estadisticas;
 pub mod fallo;
+pub mod informe;
+mod informe_metricas;
+mod informe_sesion;
+mod informe_texto;
 pub mod medios;
 mod medios_audio;
 mod medios_bus;

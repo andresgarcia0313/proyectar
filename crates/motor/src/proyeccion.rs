@@ -59,6 +59,7 @@ impl Motor {
 
 async fn atender(mut rx: mpsc::UnboundedReceiver<Orden>, avisar: Avisar) {
     tokio::task::spawn_blocking(crate::salida_audio::limpiar_huerfano); // left by a crash
+    tokio::task::spawn_blocking(crate::autodiagnostico::anotar); // for `proyectar --informe`
     let recientes = Arc::new(Mutex::new(Recientes::cargar()));
     avisar(Aviso::Recientes(recientes.lock().unwrap_or_else(|e| e.into_inner()).pantallas.clone()));
     let (mut wd, mut busqueda, mut activa) =
