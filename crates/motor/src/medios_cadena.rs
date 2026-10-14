@@ -1,11 +1,10 @@
-//! Pipeline text (source, encoder, MPEG-TS, RTP, UDP): pure strings, so the layout can be unit tested.
+//! Pipeline text (source, encoder, MPEG-TS, RTP, appsink for `envio`): pure strings, so the layout can be unit tested.
 
 use crate::medios::{Codificador, Origen};
 use crate::medios_audio::audio;
 use crate::medios_codificador::codificador;
 use crate::medios_tipos::fuente;
 use crate::modo::Perfil;
-use std::net::SocketAddr;
 use wfd::{AudioCodec, VideoMode};
 
 pub const PID_PMT: u32 = 0x1000;
@@ -19,7 +18,6 @@ pub(crate) fn cola(max: u32, fuga: bool) -> String {
 
 pub fn descripcion(
     origen: &Origen,
-    destino: SocketAddr,
     modo: &VideoMode,
     codec: Option<AudioCodec>,
     perfil: Perfil,
@@ -35,15 +33,14 @@ pub fn descripcion(
          mpegtsmux name=mux alignment=7 latency={} pat-interval=9000 pmt-interval=9000 \
          pcr-interval=3600 \
          ! rtpmp2tpay pt=33 mtu=1328 perfect-rtptime=false ssrc=1 ! \
-         udpsink name=salida host={} port={} sync=false async=false qos-dscp=46 buffer-size=1048576 {}",
+         appsink name=salida emit-signals=true sync=false async=false max-buffers=0 \
+         enable-last-sample=false {}",
         fuente(origen, modo),
         cola(perfil.cola, true),
         modo.fps,
         codificador(cod, modo, perfil),
         cola(4, false),
         u64::from(perfil.mux_ms) * 1_000_000,
-        destino.ip(),
-        destino.port(),
         audio(codec, sonido_tv),
     )
 }

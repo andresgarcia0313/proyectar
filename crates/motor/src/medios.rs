@@ -1,6 +1,8 @@
-//! Media pipeline: screen and sound -> H.264 + AAC -> MPEG-TS -> RTP -> UDP. Text in `medios_cadena`,
-//! assembly in `medios_montaje`; here its lifetime, IDR requests, statistics and failures.
+//! Media pipeline: screen and sound -> H.264 + AAC -> MPEG-TS -> RTP -> paced UDP. Text in
+//! `medios_cadena`, assembly in `medios_montaje`, sending in `envio`; here its lifetime, IDR
+//! requests, statistics and failures.
 
+use crate::envio::Emisor;
 use crate::fallo::{Fallo, Resultado};
 use crate::medios_estado::{evento_idr, Aviso, Clase};
 use crate::medios_medidas::Medidas;
@@ -13,6 +15,7 @@ use gstreamer as gst;
 use gstreamer::prelude::*;
 use std::net::SocketAddr;
 use std::os::fd::OwnedFd;
+use std::sync::Arc;
 use tokio::sync::watch;
 use wfd::{AudioCodec, VideoMode};
 
@@ -22,7 +25,8 @@ pub struct Medios {
     modo: VideoMode,
     medidas: Medidas,
     aviso: watch::Receiver<Aviso>,
-    ritmo: Ritmo,
+    ritmo: Arc<Ritmo>,
+    emisor: Emisor,
     _fd: Option<OwnedFd>,
 }
 
@@ -38,14 +42,14 @@ impl Medios {
     ) -> Resultado<Medios> {
         let m = montar(origen, destino, &modo, audio, perfil, codificador, sonido_tv)?;
         m.tuberia.set_state(gst::State::Playing).map_err(|e| Fallo::Medios(e.to_string()))?;
-        let ritmo = Ritmo::nuevo(perfil.kbps);
         Ok(Medios {
             pipeline: m.tuberia,
             codificador,
             modo,
             medidas: m.medidas,
             aviso: m.aviso,
-            ritmo,
+            ritmo: m.ritmo,
+            emisor: m.emisor,
             _fd: m.fd,
         })
     }
@@ -73,7 +77,20 @@ impl Medios {
         let ((fps, kbps), (retardo_ms, retardo_peor_ms, retardo_cod_ms)) =
             (self.medidas.contador.tasa(), self.medidas.retardos());
         let (ancho, alto, gpu) = (self.modo.width, self.modo.height, self.codificador.es_gpu());
-        Estadisticas { ancho, alto, fps, kbps, gpu, retardo_ms, retardo_peor_ms, retardo_cod_ms }
+        let crate::rtcp::Informe { perdida_pct, perdidos, jitter_ms } = self.emisor.calidad();
+        Estadisticas {
+            ancho,
+            alto,
+            fps,
+            kbps,
+            gpu,
+            retardo_ms,
+            retardo_peor_ms,
+            retardo_cod_ms,
+            perdida_pct,
+            perdidos,
+            jitter_ms,
+        }
     }
 
     /// Waits for the first bus error and says which stage it came from.
@@ -86,6 +103,11 @@ impl Medios {
             Ok(Some((Clase::Otra, detalle))) => Fallo::Medios(detalle),
             _ => Fallo::Medios("la tubería se cerró".into()),
         }
+    }
+
+    /// Where the TV's RTCP reports are read (`envio::PUERTO_RTCP` unless it was taken).
+    pub fn puerto_rtcp(&self) -> u16 {
+        self.emisor.puerto_rtcp()
     }
 
     pub fn tuberia(&self) -> &gst::Pipeline {
