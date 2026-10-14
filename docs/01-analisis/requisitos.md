@@ -1,7 +1,7 @@
 ---
 lang: es-CO
 título: Proyectar - Especificación de requisitos
-versión: 1.2.0
+versión: 1.3.0
 ---
 
 # Proyectar - Especificación de requisitos
@@ -13,6 +13,7 @@ versión: 1.2.0
 | 1.0.0 | 2026-10-12 | Andrés García | Versión inicial: visión, funciones de Windows a igualar, requisitos, exclusiones y riesgos |
 | 1.0.1 | 2026-10-12 | Andrés García | Limpieza para publicar: equipos de referencia sin datos del hogar ni nombres de equipos |
 | 1.1.0 | 2026-10-13 | Andrés García | Primera prueba con TV real: RF-14 a RF-17 y hoja de ruta tomada del emisor de Windows |
+| 1.3.0 | 2026-10-13 | Andrés García | RF-23 a RF-26: técnicas de baja latencia del modo Juegos, envío a ritmo, RTCP y cronómetro |
 | 1.2.0 | 2026-10-13 | Andrés García | RF-18 a RF-22 tras la segunda prueba: captura directa, audio del TV, latencia medida y comparación con macOS y Android |
 
 ## 1. Visión
@@ -56,6 +57,10 @@ con Windows 11 23H2 y documentación de Microsoft.
 | RF-20 | Latencia visible | Medir el retardo dentro del equipo (captura a red) y mostrarlo en la tarjeta | El valor cambia cada segundo y se anota en el registro | Debe |
 | RF-21 | Monitoreo | Cada 10 s: video, retardos, CPU del proceso y radio Wi-Fi Direct (señal, tasa, reintentos) | Un corte o un retraso se explica con el registro | Debe |
 | RF-22 | Ventana | Recordar el tamaño entre aperturas y mostrar la versión en el pie | Al reabrir conserva el tamaño | Debería |
+| RF-23 | Juegos de baja latencia | LPCM si el TV lo ofrece, refresco intra con búfer de 3 cuadros y respaldo a la GPU si no sostiene los fps | Retardo percibido menor que en Trabajo, medido con el cronómetro | Debe |
+| RF-24 | Envío a ritmo | Emisor UDP propio con cubo de fichas y DSCP 46 | Sin ráfagas por cuadro; prueba de ritmo medido | Debería |
+| RF-25 | RTCP | Leer los informes del TV en el puerto 5001 y ajustar el bitrate con pérdida sostenida | Pérdida y fluctuación en el registro | Debería |
+| RF-26 | Medir latencia | Cronómetro en milisegundos para fotografiar emisor y TV | La diferencia se puede anotar en el registro | Debería |
 | RF-17 | Datos del receptor | Pedir en M3 los parámetros opcionales que pide Windows (EDID, conector, modo preferido) y anotarlos | Un receptor que no los conoce no falla; los que responde quedan en el registro | Debería |
 
 ## 4. Requisitos no funcionales
@@ -96,10 +101,10 @@ Inspección de solo lectura del emisor de Windows 11 (`winmde.dll` negocia RTSP;
 | Función de Windows | Evidencia | Viabilidad en Linux | Prioridad |
 | --- | --- | --- | --- |
 | Grupo persistente: reconectar sin aceptar de nuevo | `WFDProfile:persistent`, `IsReconnect` | wpa_supplicant por D-Bus (`persistent`, `Invite`); NetworkManager no lo expone | Debería |
-| Bitrate según los informes RTCP del receptor | `CBandwidthManager::OnRR`, `CRtcpNackSplitter` | `rtpbin` de GStreamer y bitrate en caliente | Debería |
+| Bitrate según los informes RTCP del receptor | `CBandwidthManager::OnRR`, `CRtcpNackSplitter` | Hecho en 0.4.0 (RF-25) | Hecho |
 | Cambio de formato sin reconectar | `OnDynamicFormatChange`, `microsoft_format_change_capability` | Capa RTSP (M4 nuevo dentro de la sesión) | Podría |
 | Canal del grupo junto al de la Wi-Fi normal | `IsInterfaceInMultiChannelConfiguration` | wpa_supplicant (`frequency`, `go_intent`) | Podría |
-| Envío a ritmo constante | `EnableSendTimeSmoothing` | `udpsink` no regula con `sync=false` (medido); exige un elemento propio | Podría |
+| Envío a ritmo constante | `EnableSendTimeSmoothing` | Hecho en 0.4.0 con un emisor propio (RF-24) | Hecho |
 | PIN opcional | `PreferPinBasedPairing` | wpa_supplicant | Podría |
 
 ## 8. Comparación con otros emisores

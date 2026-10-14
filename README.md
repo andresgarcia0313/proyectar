@@ -1,7 +1,7 @@
 ---
 lang: es-CO
 título: Proyectar
-versión: 0.3.0
+versión: 0.4.0
 ---
 
 # Proyectar
@@ -21,6 +21,7 @@ paleta Drácula.
 | 0.1.0 | 2026-10-12 | Andrés García | Documentación inicial del proyecto |
 | 0.1.1 | 2026-10-12 | Andrés García | README bilingüe para publicar: funciones, requisitos, GPU, receptores, instalación, cortafuegos y modo demo |
 | 0.2.0 | 2026-10-13 | Andrés García | Nombre del equipo en Wi-Fi Direct (`--sistema`), fases de conexión, diagnóstico y registro de eventos |
+| 0.4.0 | 2026-10-13 | Andrés García | Modo Juegos de baja latencia (LPCM, refresco intra, búfer de 3 cuadros), envío a ritmo constante, informes RTCP del TV, cronómetro para medir |
 | 0.3.0 | 2026-10-13 | Andrés García | Salida de audio del TV en KDE, latencia del equipo visible, búfer de decodificación por perfil, monitoreo de radio y CPU, tamaño de ventana recordado |
 
 ## Qué es
@@ -151,6 +152,7 @@ Con ufw:
 sudo ufw allow in on p2p-+ to any port 7236 proto tcp
 sudo ufw allow in on p2p-+ to any port 67 proto udp
 sudo ufw allow in on p2p-+ to any port 68 proto udp
+sudo ufw allow in on p2p-+ to any port 5001 proto udp   # informes RTCP del televisor
 ```
 
 Con firewalld:
@@ -161,6 +163,7 @@ sudo firewall-cmd --permanent --zone=proyectar --add-interface=p2p-+
 sudo firewall-cmd --permanent --zone=proyectar --add-port=7236/tcp
 sudo firewall-cmd --permanent --zone=proyectar --add-port=67/udp
 sudo firewall-cmd --permanent --zone=proyectar --add-port=68/udp
+sudo firewall-cmd --permanent --zone=proyectar --add-port=5001/udp
 sudo firewall-cmd --reload
 ```
 
@@ -174,10 +177,19 @@ Mientras conecta, Proyectar muestra en qué paso va: invitar, enlazar, abrir el 
 
 ### Latencia
 
-La tarjeta muestra "Equipo N ms": el retardo dentro del computador, de la captura a la red (suele
-quedar entre 20 y 60 ms). El televisor suma su propio búfer. En modo **Juegos** Proyectar envía
-720p a 60 fps con un búfer de decodificación de 500 ms (2 s en Videos), lo que reduce la espera del
-televisor. Activar el modo Juego del televisor ayuda si la marca lo aplica a Screen Mirroring.
+La tarjeta muestra "Equipo N ms": el retardo dentro del computador, de la captura a la red. El
+televisor suma su propio búfer, y es la parte que más pesa. El modo **Juegos** ataca esa parte:
+
+- Audio LPCM sin comprimir si el televisor lo ofrece: no hay retardo de codificación y el TV espera
+  menos para sincronizar voz e imagen.
+- Refresco intra (x264, escalado en la GPU): una franja se renueva en cada cuadro en lugar de enviar
+  cuadros clave grandes, así el búfer del decodificador baja a unos 3 cuadros (50 ms a 60 fps). Si el
+  equipo está tan ocupado que no sostiene el 80 % de los fps durante 5 s, sigue con la GPU.
+- Envío a ritmo constante: los paquetes salen repartidos, sin ráfagas que agranden el búfer del TV.
+- Informes RTCP del televisor (pérdida y fluctuación) que ajustan el bitrate y quedan en el registro.
+
+El botón del cronómetro, en la tarjeta, abre un reloj en milisegundos: llévalo a la pantalla que se
+proyecta, toma una foto donde se vean el portátil y el TV y resta los dos tiempos.
 
 ### Si algo falla
 
@@ -306,6 +318,7 @@ your computer is the Wi-Fi Direct group owner. Open those ports only on the `p2p
 sudo ufw allow in on p2p-+ to any port 7236 proto tcp
 sudo ufw allow in on p2p-+ to any port 67 proto udp
 sudo ufw allow in on p2p-+ to any port 68 proto udp
+sudo ufw allow in on p2p-+ to any port 5001 proto udp   # informes RTCP del televisor
 ```
 
 For firewalld, create a `proyectar` zone bound to `p2p-+` with ports `7236/tcp`, `67/udp` and `68/udp`

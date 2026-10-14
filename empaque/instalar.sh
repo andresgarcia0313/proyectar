@@ -21,6 +21,7 @@ if [ "${1:-}" = "--sistema" ]; then
   if command -v ufw >/dev/null && sudo ufw status | grep -q "Status: active\|Estado: activo"; then
     sudo ufw allow in on p2p-+ to any port 7236 proto tcp comment 'Proyectar Miracast RTSP'
     sudo ufw allow in on p2p-+ to any port 67 proto udp comment 'Proyectar DHCP Wi-Fi Direct'
+    sudo ufw allow in on p2p-+ to any port 5001 proto udp comment 'Proyectar RTCP del televisor'
   fi
   echo "Sistema listo: el televisor verá el nombre $(hostname)"; exit 0
 fi

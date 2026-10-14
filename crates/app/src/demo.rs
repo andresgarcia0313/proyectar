@@ -43,6 +43,7 @@ pub fn reproducir(escena: &str, enviar: impl Fn(Aviso)) {
             retardo_ms: 38.0,
             retardo_peor_ms: 52.0,
             retardo_cod_ms: 9.0,
+            ..Default::default()
         }));
     }
     if escena == "error" {

@@ -1,5 +1,4 @@
-//! Adaptive bitrate, as Windows does it: a display that keeps asking for full frames is
-//! losing packets, so the picture gets lighter; after a calm spell it climbs back.
+//! Adaptive bitrate as in Windows: steady loss (IDR requests, RTCP) lightens the picture; calm restores it.
 
 use crate::medios_tipos::Codificador;
 use gstreamer as gst;
@@ -10,8 +9,7 @@ use std::time::{Duration, Instant};
 
 /// Two requests this close mean steady loss, not a one-off glitch.
 const RAFAGA: Duration = Duration::from_secs(5);
-/// Calm needed before each step back up.
-const CALMA: Duration = Duration::from_secs(15);
+const CALMA: Duration = Duration::from_secs(15); // calm before each step back up
 /// Never below this share of the mode's bitrate: text must stay readable.
 const PISO: u32 = 40;
 /// Loss in an RTCP report that counts; less is ordinary Wi-Fi noise the TV conceals.
@@ -98,33 +96,5 @@ pub fn aplicar(cod: &gst::Element, codificador: Codificador, kbps: u32) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn baja_con_perdida_seguida_y_no_por_un_pedido_suelto() {
-        let r = Ritmo::nuevo(10_000);
-        assert_eq!(r.perdida(), None);
-        assert_eq!(r.perdida(), Some(7_500));
-        assert_eq!(r.perdida(), Some(5_600));
-        for _ in 0..5 {
-            r.perdida();
-        }
-        assert_eq!(r.perdida(), None, "nunca baja del piso");
-        assert_eq!(r.calma(), None, "sin calma no sube");
-    }
-
-    #[test]
-    fn la_perdida_rtcp_sostenida_baja_y_la_suelta_no() {
-        let r = Ritmo::nuevo(10_000);
-        assert_eq!(
-            (r.informe(0.0), r.informe(5.0), r.informe(1.0), r.informe(5.0)),
-            (None, None, None, None)
-        );
-        assert_eq!(r.informe(5.0), Some(7_500), "dos informes con pérdida seguidos");
-        assert_eq!(r.informe(5.0), None, "cada escalón pide otro par");
-        assert_eq!(r.informe(9.0), Some(5_600));
-        assert_eq!(r.actual(), 5_600);
-        assert_eq!(r.calma(), None, "la pérdida reciente impide subir");
-    }
-}
+#[path = "medios_ritmo_pruebas.rs"]
+mod pruebas;

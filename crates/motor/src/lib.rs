@@ -13,6 +13,7 @@ pub mod envio;
 mod envio_cubo;
 mod envio_red;
 mod envio_rtcp;
+mod estadisticas;
 pub mod fallo;
 pub mod medios;
 mod medios_audio;
@@ -20,6 +21,7 @@ mod medios_cadena;
 mod medios_codificador;
 mod medios_estado;
 mod medios_latencia;
+mod medios_lectura;
 mod medios_medidas;
 mod medios_montaje;
 mod medios_ritmo;
@@ -42,6 +44,7 @@ mod vigia;
 pub mod wifi_direct;
 
 pub use diagnostico::{Causa, Diagnostico};
+pub use estadisticas::Estadisticas;
 pub use fallo::{Accion, Fallo};
 pub use modo::{Fuente, Latencia, Opciones};
 pub use proyeccion::Motor;
@@ -74,25 +77,6 @@ pub enum Estado {
         intento: u32,
         motivo: String, // the diagnosis title
     },
-}
-
-/// Live numbers for the status card.
-#[derive(Debug, Clone, Copy, PartialEq, Default, serde::Serialize)]
-pub struct Estadisticas {
-    pub ancho: u32,
-    pub alto: u32,
-    pub fps: f32,
-    pub kbps: u32,
-    /// `true` with the GPU encoder, `false` with a software fallback.
-    pub gpu: bool,
-    /// Delay inside this laptop, capture to network, in ms: average and worst of the last second.
-    pub retardo_ms: f32,
-    pub retardo_peor_ms: f32,
-    pub retardo_cod_ms: f32, // capture to encoded frame
-    /// From the TV's RTCP reports: share lost lately (%), packets lost in total, jitter (ms).
-    pub perdida_pct: f32,
-    pub perdidos: i32,
-    pub jitter_ms: f32,
 }
 
 /// Everything the engine reports, from its own threads: queue it to the GUI thread.
