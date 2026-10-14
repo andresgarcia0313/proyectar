@@ -19,7 +19,7 @@ pub fn caps_reply(video: &str, audio: &str) -> String {
 }
 
 pub fn wanted() -> wfd::Wanted {
-    wfd::Wanted { max_height: 1080, max_fps: 60, audio: true, local_ip: "192.168.49.1".into() }
+    wfd::Wanted { max_height: 1080, max_fps: 60, audio: true, lpcm: false, local_ip: "192.168.49.1".into() }
 }
 
 pub struct Sink {

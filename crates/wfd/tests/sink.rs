@@ -6,7 +6,7 @@ use std::time::Duration;
 use wfd::{AudioCodec, Event, Session, Wanted};
 
 fn wanted() -> Wanted {
-    Wanted { max_height: 1080, max_fps: 60, audio: true, local_ip: "192.168.49.1".into() }
+    Wanted { max_height: 1080, max_fps: 60, audio: true, lpcm: false, local_ip: "192.168.49.1".into() }
 }
 
 #[tokio::test]

@@ -19,6 +19,8 @@ pub struct Wanted {
     pub max_height: u32,
     pub max_fps: u32,
     pub audio: bool,
+    /// Uncompressed audio when the sink offers it: no encoder delay and less buffering in the TV.
+    pub lpcm: bool,
     /// Our address on the Wi-Fi Direct link, for the presentation URL.
     pub local_ip: String,
 }

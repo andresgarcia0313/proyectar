@@ -66,12 +66,8 @@ pub async fn intentar(cx: Contexto<'_>) -> Resultado<Fin> {
         let (local, remoto) = (tcp.local_addr()?, tcp.peer_addr()?);
         let opciones = cx.opciones.borrow_and_update().clone();
         let perfil = opciones.latencia.perfil();
-        let quiero = wfd::Wanted {
-            max_height: perfil.max_height,
-            max_fps: perfil.max_fps,
-            audio: true,
-            local_ip: local.ip().to_string(),
-        };
+        let (max_height, max_fps, lpcm, local_ip) = (perfil.max_height, perfil.max_fps, perfil.lpcm, local.ip().to_string());
+        let quiero = wfd::Wanted { max_height, max_fps, audio: true, lpcm, local_ip };
         let (sesion, acordado) = wfd::Session::negotiate(tcp, &quiero).await?;
         let origen = cx.captura.origen()?;
         let destino = SocketAddr::new(remoto.ip(), acordado.rtp_port);

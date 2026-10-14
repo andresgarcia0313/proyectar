@@ -28,8 +28,8 @@ fn mandatory_fallbacks() {
     let no_profile = "00 00 00 00 00000040 00000000 00000000 00 0000 0000 00 none none";
     assert_eq!(video::choose(no_profile, 720, 60).unwrap().profile, 0x01, "CBP is mandatory");
     assert!(matches!(video::choose(" None ", 1080, 60), Err(wfd::Error::NoCommonFormat("video"))));
-    assert_eq!(audio::choose("LPCM 00000001 00"), Some(wfd::AudioCodec::Lpcm), "44.1 kHz only");
-    assert_eq!(audio::choose(""), None);
+    assert_eq!(audio::choose("LPCM 00000001 00", false), Some(wfd::AudioCodec::Lpcm), "44.1 kHz only");
+    assert_eq!(audio::choose("", false), None);
 }
 
 #[test]

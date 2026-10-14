@@ -22,10 +22,13 @@ fn baseline_only_sink_with_several_codec_entries() {
 
 #[test]
 fn audio_prefers_aac_then_lpcm() {
-    assert_eq!(audio::choose("LPCM 00000003 00, AAC 00000001 00"), Some(wfd::AudioCodec::Aac));
-    assert_eq!(audio::choose("LPCM 00000002 00"), Some(wfd::AudioCodec::Lpcm));
-    assert_eq!(audio::choose("AC3 00000001 00"), Some(wfd::AudioCodec::Lpcm), "mandatory LPCM");
-    assert_eq!(audio::choose(" NONE "), None);
+    assert_eq!(audio::choose("LPCM 00000003 00, AAC 00000001 00", false), Some(wfd::AudioCodec::Aac));
+    assert_eq!(audio::choose("LPCM 00000002 00", false), Some(wfd::AudioCodec::Lpcm));
+    assert_eq!(audio::choose("AC3 00000001 00", false), Some(wfd::AudioCodec::Lpcm), "mandatory LPCM");
+    assert_eq!(audio::choose(" NONE ", false), None);
+    // Juegos asks for LPCM: only when the sink lists it at 48 kHz stereo (mode bit 1).
+    assert_eq!(audio::choose("LPCM 00000003 00, AAC 00000001 00", true), Some(wfd::AudioCodec::Lpcm));
+    assert_eq!(audio::choose("LPCM 00000001 00, AAC 00000001 00", true), Some(wfd::AudioCodec::Aac));
 }
 
 #[test]

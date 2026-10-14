@@ -40,7 +40,7 @@ pub fn choose(caps: &str, wanted: &Wanted) -> Result<Negotiated, Error> {
     let formats = params::get(caps, "wfd_video_formats").unwrap_or("");
     let video = video::choose(formats, wanted.max_height, wanted.max_fps)?;
     let codecs = params::get(caps, "wfd_audio_codecs").unwrap_or("none");
-    let audio = if wanted.audio { audio::choose(codecs) } else { None };
+    let audio = if wanted.audio { audio::choose(codecs, wanted.lpcm) } else { None };
     let ports = params::get(caps, "wfd_client_rtp_ports").and_then(params::rtp_port);
     Ok(Negotiated { video, audio, rtp_port: ports.unwrap_or(19000) })
 }

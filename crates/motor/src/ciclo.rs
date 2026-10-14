@@ -32,13 +32,17 @@ pub struct Ciclo {
 
 impl Ciclo {
     pub async fn correr(mut self) {
-        let (mut codificador, mut captura, mut intento) = (Codificador::primero(), None::<Captura>, 0);
+        let (mut codificador, mut captura, mut intento) =
+            (Codificador::para(self.opciones.borrow().latencia.perfil()), None::<Captura>, 0);
         loop {
             let (inicio, mut fase) = (Instant::now(), Causa::Captura);
             let paso = self.paso(&mut captura, codificador, &mut fase).await;
             let fallo = match paso {
                 Ok(Fin::Terminada) => break,
-                Ok(Fin::Repetir) => continue,
+                Ok(Fin::Repetir) => {
+                    codificador = Codificador::para(self.opciones.borrow().latencia.perfil());
+                    continue;
+                }
                 Err(fallo) => fallo,
             };
             intento = if inicio.elapsed() > SANA { 1 } else { intento + 1 };

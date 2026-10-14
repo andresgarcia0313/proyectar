@@ -4,6 +4,11 @@
 # televisores muestran como "0" en el aviso de permitir la conexión.
 # Script de NetworkManager-dispatcher: corre como root al subir una interfaz o cambiar el nombre.
 case "${2:-up}" in up | hostname) ;; *) exit 0 ;; esac
+# Grupo Wi-Fi Direct recién creado: sin ahorro de energía, que retrasa paquetes hasta 100 ms.
+case "${1:-}" in p2p-*)
+    command -v iw >/dev/null && iw dev "$1" set power_save off 2>/dev/null
+    exit 0 ;;
+esac
 nombre=$(hostnamectl --pretty 2>/dev/null)
 [ -n "$nombre" ] || nombre=$(hostname)
 nombre=$(printf %s "$nombre" | cut -c1-32)

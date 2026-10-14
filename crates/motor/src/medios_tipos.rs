@@ -14,6 +14,8 @@ pub enum Origen {
 /// Encoders, best first: GPUs (lowest delay, no CPU), then software.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Codificador {
+    /// Juegos: x264 with periodic intra refresh, scaled on the GPU (VA-API). Lowest TV delay.
+    Refresco,
     /// Intel (Gen 9 and later) low-power VA-API engine.
     Gpu,
     /// VA-API on AMD or older Intel.
@@ -25,7 +27,8 @@ pub enum Codificador {
     X264,
 }
 
-const ORDEN: [Codificador; 6] = [
+const ORDEN: [Codificador; 7] = [
+    Codificador::Refresco,
     Codificador::Gpu,
     Codificador::GpuVa,
     Codificador::Nvidia,
@@ -35,9 +38,17 @@ const ORDEN: [Codificador; 6] = [
 ];
 
 impl Codificador {
-    /// The best encoder this computer has.
+    /// The best encoder this computer has; intra refresh only when the mode asks for it.
     pub fn primero() -> Self {
-        ORDEN.into_iter().find(|c| c.disponible()).unwrap_or(Self::X264)
+        ORDEN.into_iter().skip(1).find(|c| c.disponible()).unwrap_or(Self::X264)
+    }
+
+    pub fn para(perfil: crate::modo::Perfil) -> Self {
+        if perfil.refresco && Self::Refresco.disponible() {
+            Self::Refresco
+        } else {
+            Self::primero()
+        }
     }
 
     /// The next encoder in the chain that this computer has, if any.
@@ -47,11 +58,12 @@ impl Codificador {
     }
 
     pub fn disponible(self) -> bool {
-        gstreamer::init().is_ok() && gstreamer::ElementFactory::find(self.nombre()).is_some()
+        let hay = |e: &str| gstreamer::init().is_ok() && gstreamer::ElementFactory::find(e).is_some();
+        hay(self.nombre()) && (self != Self::Refresco || hay("vapostproc"))
     }
 
     pub fn es_gpu(self) -> bool {
-        !matches!(self, Self::OpenH264 | Self::X264)
+        !matches!(self, Self::OpenH264 | Self::X264 | Self::Refresco)
     }
 
     pub fn nombre(self) -> &'static str {
@@ -61,7 +73,7 @@ impl Codificador {
             Self::Nvidia => "nvh264enc",
             Self::V4l2 => "v4l2h264enc",
             Self::OpenH264 => "openh264enc",
-            Self::X264 => "x264enc",
+            Self::X264 | Self::Refresco => "x264enc",
         }
     }
 }

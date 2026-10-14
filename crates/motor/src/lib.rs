@@ -13,6 +13,7 @@ pub mod fallo;
 pub mod medios;
 mod medios_audio;
 mod medios_cadena;
+mod medios_codificador;
 mod medios_estado;
 mod medios_latencia;
 mod medios_medidas;
@@ -23,6 +24,7 @@ pub mod modo;
 mod monitor;
 mod nm;
 mod pantalla;
+mod perfil;
 mod prioridad;
 mod proyeccion;
 pub mod recientes;
@@ -40,8 +42,7 @@ pub use modo::{Fuente, Latencia, Opciones};
 pub use proyeccion::Motor;
 pub use wifi_direct::Pantalla;
 
-/// How the engine reports, from any of its threads.
-pub type Avisar = std::sync::Arc<dyn Fn(Aviso) + Send + Sync>;
+pub type Avisar = std::sync::Arc<dyn Fn(Aviso) + Send + Sync>; // called from any engine thread
 
 /// Where a projection stands, as the Win+K panel shows it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -63,7 +64,6 @@ pub enum Estado {
     Proyectando {
         nombre: String,
     },
-    /// Something failed and the engine is trying again on its own.
     Reconectando {
         nombre: String,
         intento: u32,

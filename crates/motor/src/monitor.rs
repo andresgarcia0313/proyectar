@@ -12,6 +12,8 @@ pub struct Radio {
     pub tx_mbps: Option<f32>,
     pub reintentos: Option<u64>,
     pub fallidos: Option<u64>,
+    /// `false` once the dispatcher turned power save off on the group (it adds up to 100 ms).
+    pub ahorro: Option<bool>,
 }
 
 /// Reads `iw dev p2p-… station dump` (no root needed); `None` when there is no group.
@@ -23,7 +25,10 @@ pub async fn radio() -> Option<Radio> {
             .find(|n| n.starts_with("p2p-"))?;
         let salida =
             std::process::Command::new("iw").args(["dev", &interfaz, "station", "dump"]).output().ok()?;
-        Some(Radio { interfaz, ..leer(&String::from_utf8_lossy(&salida.stdout)) })
+        let ahorro =
+            std::process::Command::new("iw").args(["dev", &interfaz, "get", "power_save"]).output().ok();
+        let ahorro = ahorro.map(|s| String::from_utf8_lossy(&s.stdout).contains(": on"));
+        Some(Radio { interfaz, ahorro, ..leer(&String::from_utf8_lossy(&salida.stdout)) })
     })
     .await
     .ok()
@@ -40,6 +45,7 @@ fn leer(texto: &str) -> Radio {
         tx_mbps: valor("tx bitrate:").and_then(|v| v.parse().ok()),
         reintentos: valor("tx retries:").and_then(|v| v.parse().ok()),
         fallidos: valor("tx failed:").and_then(|v| v.parse().ok()),
+        ahorro: None,
     }
 }
 

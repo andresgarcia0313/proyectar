@@ -16,10 +16,11 @@ impl AudioCodec {
     }
 }
 
-/// AAC first: every Miracast sink decodes it and it needs a twentieth of LPCM's bandwidth.
+/// AAC first (every Miracast sink decodes it, a twentieth of LPCM's bandwidth) unless `lpcm`
+/// asks for uncompressed audio and the sink lists LPCM 48 kHz stereo.
 /// A sink that takes audio but lists neither (only AC3, only 44.1 kHz, unreadable) still
 /// gets LPCM 48 kHz stereo, which the spec makes mandatory. `None` only for `none`.
-pub fn choose(sink: &str) -> Option<AudioCodec> {
+pub fn choose(sink: &str, lpcm: bool) -> Option<AudioCodec> {
     let sink = sink.trim();
     if sink.is_empty() || sink.eq_ignore_ascii_case("none") {
         return None;
@@ -36,5 +37,5 @@ pub fn choose(sink: &str) -> Option<AudioCodec> {
     let has = |name: &str, bit: u32| {
         offers.iter().any(|(n, m)| n.eq_ignore_ascii_case(name) && m & (1 << bit) != 0)
     };
-    Some(if has("AAC", 0) { AudioCodec::Aac } else { AudioCodec::Lpcm })
+    Some(if has("AAC", 0) && !(lpcm && has("LPCM", 1)) { AudioCodec::Aac } else { AudioCodec::Lpcm })
 }

@@ -55,6 +55,8 @@ async fn gpu_720p60_perfil_high() {
 async fn respaldo_openh264_y_x264() {
     probar(Codificador::OpenH264, modo(1280, 720, 30, 1), 4).await;
     probar(Codificador::X264, modo(1280, 720, 30, 1), 4).await;
+    // Juegos: x264 intra refresh scaled on the GPU.
+    probar(Codificador::Refresco, modo(1280, 720, 60, 1), 4).await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
