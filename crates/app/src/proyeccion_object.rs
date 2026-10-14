@@ -59,6 +59,10 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "descartarDiagnostico"]
         fn descartar_diagnostico(self: Pin<&mut Proyeccion>);
+        /// Logs the delay measured with the stopwatch; false when it is not a number of ms.
+        #[qinvokable]
+        #[cxx_name = "anotarLatencia"]
+        fn anotar_latencia(self: &Proyeccion, texto: &QString) -> bool;
         /// The event loop is alive; the supervisor restarts the app when beats stop.
         #[qinvokable]
         fn beat(self: &Proyeccion);

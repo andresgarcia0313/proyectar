@@ -123,6 +123,7 @@ Window {
             kbps: win.proy.kbps
             gpu: win.proy.gpu
             retardo: win.proy.retardo
+            registro: win.proy
             onDesconectar: win.proy.desconectar()
         }
 

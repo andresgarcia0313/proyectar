@@ -13,6 +13,8 @@ Rectangle {
     property int kbps: 0
     property bool gpu: false
     property real retardo: 0
+    // The `Proyeccion` object, where the stopwatch logs the delay the user measured.
+    property var registro: null
     signal desconectar()
     readonly property bool proyectando: codigo === 4
     readonly property color tono: proyectando ? Theme.ok : codigo === 5 ? Theme.warn : Theme.accent
@@ -85,4 +87,14 @@ Rectangle {
             onClicked: card.desconectar()
         }
     }
+    // Discreet, in the corner: the card keeps its height in the smallest window.
+    IconButton {
+        anchors { top: parent.top; right: parent.right; margins: Theme.s2 }
+        visible: card.proyectando
+        iconName: "timer"; tint: Theme.accent
+        tip: "Medir latencia"
+        Accessible.description: "Abre un cronómetro para fotografiar el portátil y el TV a la vez"
+        onClicked: { cronometro.show(); cronometro.raise(); cronometro.requestActivate() }
+    }
+    Cronometro { id: cronometro; registro: card.registro }
 }
